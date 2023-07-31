@@ -1,0 +1,59 @@
+require("dotenv").config();
+const logger = require("../logger")
+
+async function getDatiFinanziaria(prezzo, pv, finanziaria) {
+    try {
+        let finData = { nrate: 0, rata: 0, tan: 0, taeg: 0, proroga: "0", spese: 0 }
+        //finanziaria tan e taeg zero
+        if (finanziaria === 'Tan 0 Taeg 0') {
+            finData.tan = 0
+            finData.taeg = 0
+            finData.proroga = "Ottobre 2024"
+            if (prezzo > 398 && prezzo < 1000) {
+                finData.nrate = 10
+                finData.rata = prezzo / finData.nrate
+            }
+            if (prezzo >= 1000 && prezzo < 5000) {
+                finData.nrate = 20
+                finData.rata = prezzo / finData.nrate
+            }
+        }
+
+        //finanziaria tan 0
+        if (finanziaria === 'Tan 0 Taeg Variabile') {
+            finData.tan = 0
+            finData.proroga = "Gennaio 2024"
+
+            if (prezzo > 298.99 && prezzo <= 1499.99) {
+                finData.nrate = 20
+                finData.taeg = 10.78
+                finData.spese = ((prezzo * 0.7) / 100) * finData.nrate
+                finData.rata = (finData.spese + prezzo) / finData.nrate
+            }
+            if (prezzo >= 1500 && prezzo <= 2499.99) {
+                finData.nrate = 26
+                finData.taeg = 11.62
+                finData.spese = ((prezzo * 0.7) / 100) * finData.nrate
+                finData.rata = (finData.spese + prezzo) / finData.nrate
+            }
+            if (prezzo >= 2500 && prezzo <= 5000.99) {
+                finData.nrate = 32
+                finData.taeg = 12.19
+                finData.spese = ((prezzo * 0.7) / 100) * finData.nrate
+                finData.rata = (finData.spese + prezzo) / finData.nrate
+            }
+        }
+        finData.rata = finData.rata.toFixed(2)
+        finData.spese = finData.spese.toFixed(2)
+        finData.tan = finData.tan.toFixed(2)
+        finData.taeg = finData.taeg.toFixed(2)
+        return finData
+    } catch (err) {
+        logger.error("ERRORE: " + err)
+        return err;
+    }
+}
+
+module.exports = {
+    getDatiFinanziaria: getDatiFinanziaria,
+}
