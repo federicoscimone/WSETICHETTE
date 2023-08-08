@@ -182,4 +182,9 @@ function onListening() {
     logger.info("In ascolto su porta: " + PORT)
 }
 
-server.listen(PORT);
+if (process.env.AMBIENTE === 'DEV') server.listen(PORT);
+
+if (process.env.AMBIENTE === 'PROD') {
+    server.listen(PORT, "etichette.brunoapps.com");
+    server.addContext('etichette.bruno.it', options)
+}
