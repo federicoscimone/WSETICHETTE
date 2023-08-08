@@ -1,6 +1,9 @@
 require("dotenv").config();
 const mongoDbUrl = process.env.MONGODBURL
 const MINIMOFIN = process.env.MINIMOFIN
+const serviceWSIUser = process.env.SERVICEUSER
+const serviceWSIPass = process.env.SERVICEPASS
+
 
 const WSIURL = process.env.WSIURL
 const fs = require("fs").promises;
@@ -10,9 +13,12 @@ const logger = require('../logger');
 const odbc = require("odbc");
 const { MongoClient } = require('mongodb')
 const axios = require('axios')
-const { getDatiFinanziaria } = require('../database/finanziariaConnection')
-const { getIdScenarioFromName } = require('../database/etagConnection')
-const { getLabelsFromItem } = require('../sesApi')
+const cron = require('node-cron');
+
+const { getScenariosName } = require('../database/etagConnection')
+const { addEvent } = require('../database/utentiConnection')
+const { getLabelsFromItem, postItems, generateSesJson, generateSesScenarioJson } = require('../sesApi')
+const { generaTokenWSI } = require('../routingUtility')
 const mongoClient = new MongoClient(mongoDbUrl)
 
 const connectString = "DSN=AS400;UserID=ACCLINUX;Password=ACCLINOX"
@@ -23,6 +29,115 @@ const connectionConfig = {
     loginTimeout: 3,
 }
 
+//SCHEDULING per le variazioni automatiche, impostato per ogni giorno 06:30, 07:30, 08:30
+// aggiungere i punti vendita che passano alla nuova app o creare loop che invia lo stesso comando per tutte le sedi
+
+cron.schedule('30 6,7,8 * * *', async () => {
+    variazioniAutomatiche('LC')
+    logger.info("INVIO VARIAZIONI AUTOMATICHE PER LC")
+});
+
+const getDatiEtichette = async (pv, codici, token) => {
+    return await axios({
+        method: 'get', url: WSIURL + '/as400/codelabeldata',
+        headers: {
+            Authorization: `Bearer ${token}`,
+        },
+        data: {
+            pv: pv,
+            codici: codici
+        }
+    }).catch((err) => {
+        console.log(err)
+        logger.error("ERRORE: " + err)
+        return ({ error: "errore connessione WSI" })
+    })
+}
+
+
+const getCodiciVariazioni = async (pv, token) => {
+    let variazioni = await axios({
+        method: 'get', url: WSIURL + `/as400/variazioni?data=${formatDataToAS(new Date())}&pv=${pv}`,
+        headers: {
+            Authorization: `Bearer ${token}`,
+        }
+    }).catch((err) => {
+        console.log(err)
+        logger.error("ERRORE recupero variazioni prezzo: " + err)
+        return ({ error: "errore connessione WSI " })
+    })
+
+    return variazioni.data.map(x => { return x.ANCODI.trim() })
+}
+
+const getVariazioni = async (pv, token) => {
+    return await axios({
+        method: 'get', url: WSIURL + `/as400/variazioni?data=${formatDataToAS(new Date())}&pv=${pv}`,
+        headers: {
+            Authorization: `Bearer ${token}`,
+        }
+    }).catch((err) => {
+        console.log(err)
+        logger.error("ERRORE recupero variazioni prezzo: " + err)
+        return ({ error: "errore connessione WSI " })
+    })
+
+}
+
+const variazioniAutomatiche = async (pv) => {
+    try {
+        let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
+        let codici = await getCodiciVariazioni(pv, wsi.data.token)
+        //console.log(codici)
+        if (codici) {
+            if (codici.length > 0) {
+                let finanziaria = null//req.body.finanziaria
+                let scenario = null//req.body.scenario
+                let datiEtichette = await getDatiEtichette(pv, codici, wsi.data.token)
+
+                if (datiEtichette) {
+                    let json = await generateSesJson(mongoClient, pv, datiEtichette.data, finanziaria, scenario, 'system.user')
+                    //console.log(json)
+                    if (json.error) {
+                        logger.error("errore nella generazione del json per ses " + json.error)
+                    } else {
+                        arrayToSes = json.json
+                        arrayErrors = json.errors
+                        let resToses = await postItems(mongoClient, pv, arrayToSes)
+                        let correlationId = resToses.data.correlationId
+
+                        if (correlationId) {
+                            let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: 'system', pv: pv, scenario: scenario, finanziaria: finanziaria }
+                            addEvent(mongoClient, returnData)
+                            logger.info("DataToSes system variazioni automatiche  pv " + pv + " correlationID " + correlationId)
+                            console.log(returnData)
+                            return returnData;
+
+                        } else {
+                            logger.error("errore nella comunicazione con SES")
+                        }
+                    }
+                }
+
+                else {
+                    logger.error("errore nel recupero dei dati degli articoli")
+                }
+            } else {
+                logger.error("errore manca scenario o codici")
+            }
+
+        }
+
+        else {
+            logger.error("errore nell'ottenimento delle variazioni prezzo");
+        }
+
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+}
+
 
 // invio dati prodotto a ses
 router.post('/datatoses', async (req, res, next) => {
@@ -31,89 +146,39 @@ router.post('/datatoses', async (req, res, next) => {
         let user = req.user.username
         let arrayToSes = []
         let arrayErrors = []
-        console.log("invio dati da " + user + " dal pv " + pv)
+
         let codici = req.body.codici
-        let finanziaria = req.body.finanziaria
-        let datiEtichette = await axios({
-            method: 'get', url: WSIURL + '/as400/codelabeldata',
-            headers: {
-                Authorization: `Bearer ${req.user.WSIToken}`,
-            },
-            data: {
-                pv: pv,
-                codici: codici
-            }
-        }).catch((err) => {
-            console.log(err)
-            logger.error("ERRORE: " + err)
-        })
-        if (datiEtichette) {
+        if (codici.length > 0) {
+            let finanziaria = req.body.finanziaria
+            let scenario = req.body.scenario
 
-            if (finanziaria) {
-                for (let i = 0; i < datiEtichette.data.length; i++) {
-                    if (!datiEtichette.data[i].error) {
-                        datiEtichette.data[i].datiFin = await getDatiFinanziaria(datiEtichette.data[i].PREZZO, pv, finanziaria)
+            let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
+
+            if (datiEtichette) {
+                let json = await generateSesJson(mongoClient, pv, datiEtichette.data, finanziaria, scenario, user)
+
+                if (json.error) {
+                    res.status(400).send(json[0].custom)
+                } else {
+                    arrayToSes = json.json
+                    arrayErrors = json.errors
+                    let resToses = await postItems(mongoClient, pv, arrayToSes)
+                    let correlationId = resToses.data.correlationId
+                    logger.info("DataToSes " + user + " pv " + pv + " correlationID " + correlationId)
+                    if (correlationId) {
+                        let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria }
+                        addEvent(mongoClient, returnData)
+                        res.status(200).send(returnData)
+                    } else {
+                        res.status(400).send({ error: "errore nella comunicazione con SES" })
                     }
-
                 }
             }
-
-            for (let y = 0; y < datiEtichette.data.length; y++) {
-                console.log(datiEtichette.data[y].error)
-                if (datiEtichette.data[y].error) {
-                    arrayErrors.push(datiEtichette.data[y].error)
-
-                }
-                else {
-                    //composizione json per vcloud secondo la semantica stabilita su studio
-                    let toSES = {
-                        "CODICE": datiEtichette.data[y].CODICE,
-                        "CODICEEURONICS": datiEtichette.data[y].CODICEEURONICS,
-                        "BARCODE": datiEtichette.data[y].BARCODE,
-                        "DESCRIZIONE": datiEtichette.data[y].DESCRIZIONE,
-                        "MARCA": datiEtichette.data[y].MARCA,
-                        "PREZZOPRECEDENTE": datiEtichette.data[y].PREZZOPRECEDENTE,
-                        "PREZZOCONSIGLIATO": datiEtichette.data[y].PREZZOCONSIGLIATO,
-                        "PREZZO": datiEtichette.data[y].PREZZO,
-                        "PREZZOFUTURO": datiEtichette.data[y].PREZZOFUTURO,
-                        "PREZZOVANTAGE": datiEtichette.data[y].PREZZOVANTAGE,
-                        "PREZZOMINIMO": datiEtichette.data[y].PREZZOMINIMO,
-                        "IMGLINK": datiEtichette.data[y].IMGLINK,
-                        "ECATLINK": datiEtichette.data[y].ECATLINK,
-                        "CARATTERISTICHE": datiEtichette.data[y].CARATTERISTICHE,
-                        "PROROGA": datiEtichette.data[y].datiFin.proroga,
-                        //"SLOGAN": datiEtichette.data[y].SLOGAN,
-                        "STELLE": Math.floor(datiEtichette.data[y].PREZZO),
-                    }
-                    if (finanziaria) {
-                        toSES.RATA = datiEtichette.data[y].datiFin.rata
-                        toSES.NRATE = datiEtichette.data[y].datiFin.nrate
-                        toSES.TAN = datiEtichette.data[y].datiFin.tan
-                        toSES.TAEG = datiEtichette.data[y].datiFin.taeg
-                    }
-                    if (datiEtichette.data[y].icon) {
-                        toSES.ICO1 = datiEtichette.data[y].icon.IDICO1
-                        toSES.ICOVALUE1 = datiEtichette.data[y].icon.VALUE1
-                        toSES.ICO2 = datiEtichette.data[y].icon.IDICO2
-                        toSES.ICOVALUE2 = datiEtichette.data[y].icon.VALUE2
-                        toSES.ICO3 = datiEtichette.data[y].icon.IDICO3
-                        toSES.ICOVALUE3 = datiEtichette.data[y].icon.VALUE3
-                        toSES.ICO4 = datiEtichette.data[y].icon.IDICO4
-                        toSES.ICOVALUE4 = datiEtichette.data[y].icon.VALUE4
-                        toSES.ICO5 = datiEtichette.data[y].icon.IDICO5
-                        toSES.ICOVALUE5 = datiEtichette.data[y].icon.VALUE5
-                        toSES.ICO6 = datiEtichette.data[y].icon.IDICO6
-                        toSES.ICOVALUE6 = datiEtichette.data[y].icon.VALUE6
-                    }
-                    arrayToSes.push(toSES)
-                }
-
+            else {
+                res.status(400).send({ error: "errore nel recupero dei dati degli articoli" })
             }
-
-            res.status(200).send(arrayToSes)
-        }
-        else {
-            res.status(400).send({ error: "errore nel recupero dei dati degli articoli" })
+        } else {
+            res.status(400).send({ error: "errore manca scenario o codici" })
         }
     } catch (err) {
         console.log(err)
@@ -123,20 +188,23 @@ router.post('/datatoses', async (req, res, next) => {
 
 
 //WIP
-router.post('/scenario', async (req, res, next) => {
+router.post('/scenariotoses', async (req, res, next) => {
     try {
         let pv = req.user.pv.sigla
-        let codice = req.query.codice
-        let scenario = req.query.scenario
+        let user = req.user.username
+        let arrayToSes = []
+        let arrayErrors = []
+        let codici = req.body.codici
+        let scenario = req.body.scenario
+        let orientamento = req.body.orientamento
+        let jsonToses = await generateSesScenarioJson(mongoClient, pv, codici, scenario, orientamento)
 
-        let labels = await getLabelsFromItem(mongoClient, pv, codice)
-        let idScenario = await getIdScenarioFromName(mongoClient, scenario)
-        console.log(idScenario)
-        res.status(200).send(idScenario)
-        /*if (result.status !== 200)
-            res.status(404).send(result.response.data.message);
-        else
-            res.status(200).send(result.data.matching.labels)*/
+        res.status(200).send(jsonToses)
+        if (codici.length > 0 && scenario) {
+
+        } else {
+            res.status(400).send({ error: "errore nessun codice trasmesso" })
+        }
     } catch (err) {
         console.log(err)
         logger.error(err)
@@ -161,9 +229,70 @@ router.get('/getLabelsFromItem', async (req, res, next) => {
     }
 })
 
+// ottieni gli id delle etichette associate al codice
+router.get('/scenarios', async (req, res, next) => {
+    try {
+
+        let result = await getScenariosName(mongoClient)
+        if (!result[0])
+            res.status(404).send({ errors: "errore nell'ottenimento degli scenari" });
+        else
+            res.status(200).send(result)
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+})
+
+function formatDataToAS(data) {
+    let ASFormatted = data.toISOString().substring(0, 4) + "-" + data.toISOString().substring(5, 7) + "-" + data.toISOString().substring(8, 10)
+    return ASFormatted
+}
+
+
+// ottieni gli id delle etichette associate al codice
+router.get('/variazioni', async (req, res, next) => {
+    try {
+        let pv = req.user.pv.sigla
+        let variazioni = await getVariazioni(pv, req.user.WSIToken)
+        //console.log(variazioni)
+        if (variazioni) {
+            res.status(200).send(variazioni.data)
+        }
+        else {
+            res.status(404).send({ errors: "errore nell'ottenimento delle variazioni prezzo" });
+        }
+
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+})
+
+
+// ottieni gli id delle etichette associate al codice
+router.get('/autovariazione', async (req, res, next) => {
+    try {
+        let pv = req.query.pv
+        let variazioni = await variazioniAutomatiche(pv)
+        console.log(variazioni)
+        if (variazioni.inviati) {
+            res.status(200).send(variazioni)
+        }
+        else {
+            res.status(404).send({ errors: "errore nell'ottenimento automatico delle variazioni prezzo" });
+        }
+
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+})
 
 
 
+
+/*
 router.post('/vcloud', async function (req, res, next) {
     try {
 
@@ -230,6 +359,6 @@ router.get('/csv', async function (req, res, next) {
         logger.error(err)
     }
 
-});
+});*/
 
 module.exports = router;

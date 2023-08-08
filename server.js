@@ -40,7 +40,7 @@ const morganMiddleware = morgan(
 );
 
 const etichette = require('./routes/etichette')
-
+const utenti = require('./routes/utenti')
 app.use(morgan('dev'));
 app.use(morganMiddleware);
 
@@ -98,8 +98,6 @@ app.post("/ldapLogin", async (req, res) => {
                 }
 
                 let wsi = await generaTokenWSI(username, password)
-                console.log("generazione WSI token")
-                console.log(wsi.data)
                 if (wsi) {
                     loggedUser.WSIToken = wsi.data.token
                     loggedUser.WSIURL = WSIURL
@@ -108,7 +106,6 @@ app.post("/ldapLogin", async (req, res) => {
                 loggedUser.role = role
                 loggedUser.username = username
                 loggedUser.pv = pv
-                console.log(loggedUser)
                 syncUtente(loggedUser)
                 jwt.sign(loggedUser, tokenKey, { expiresIn: tokenLife }, (err, token) => {
                     loggedUser.token = token
@@ -137,6 +134,7 @@ app.get('/checkUser', authenticateJWT, function (req, res, next) {
 })
 
 app.use('/etichette', authenticateJWT, etichette)
+app.use('/utenti', authenticateJWT, utenti)
 
 app.use((req, res, next) => {
     res.status(404).json({ "error": '404 percorso non trovato' });

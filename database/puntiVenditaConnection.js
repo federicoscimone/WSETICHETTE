@@ -76,6 +76,7 @@ async function updatePuntoVendita(client, id, pv) {
 
 async function getSesId(client, sigla) {
     try {
+        console.log(client)
         const database = client.db("utility");
         const puntiVendita = database.collection("puntiVendita");
         const filter = {
@@ -90,6 +91,7 @@ async function getSesId(client, sigla) {
         else
             return { error: "id ses non trovato" }
     } catch (err) {
+        console.log(err)
         logger.error("ERRORE: " + err)
         return err;
     }
