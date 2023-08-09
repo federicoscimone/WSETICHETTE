@@ -1,16 +1,34 @@
 require("dotenv").config();
 const SESKEY = process.env.SESKEY
+const WSIURL = process.env.WSIURL
+const serviceWSIPass = process.env.SERVICEPASS
+const serviceWSIUser = process.env.SERVICEUSER
 const MODE = process.env.MODE
 const logger = require('./logger');
 const axios = require('axios');
-const { getSesId } = require('./database/puntiVenditaConnection')
+
 const { getDatiFinanziaria } = require('./database/finanziariaConnection')
 const { getIdScenarioFromName, getTagFromScenarioId } = require('./database/etagConnection');
-const { log } = require("winston");
+const { generaTokenWSI } = require('./routingUtility')
 
-const getLabelsFromItem = async (client, siglapv, codice) => {
+const getSesId = async (sigla) => {
+    let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
+    let resp = await axios({
+        method: 'get', url: WSIURL + '/puntivendita/sesid?pv=' + sigla,
+        headers: {
+            Authorization: `Bearer ${wsi.data.token}`,
+        },
+    }).catch((err) => {
+        console.log(err)
+        logger.error("ERRORE: " + err)
+        return ({ error: "errore recupero collegamento con WSI" })
+    })
+    return resp.data
+}
+
+const getLabelsFromItem = async (siglapv, codice) => {
     try {
-        let idSes = MODE === 'DEV' ? 'brunoeuronics_it.vlab' : await getSesId(client, siglapv)
+        let idSes = MODE === 'DEV' ? 'brunoeuronics_it.vlab' : await getSesId(siglapv)
         let result = await axios.get(`https://api-eu.vusion.io/vcloud/v1/stores/${idSes}/items/${codice}?includes=matching.labels`, {
             headers: {
                 'Ocp-Apim-Subscription-Key': SESKEY
@@ -28,10 +46,9 @@ const getLabelsFromItem = async (client, siglapv, codice) => {
 }
 
 
-const postItems = async (client, siglapv, dati) => {
+const postItems = async (siglapv, dati) => {
     try {
-        let idSes = (siglapv === 'PR') ? 'brunoeuronics_it.vlab' : await getSesId(client, siglapv)
-
+        let idSes = (siglapv === 'PR') ? 'brunoeuronics_it.vlab' : await getSesId(siglapv)
         let result = await axios.post(`https://api-eu.vusion.io/vcloud/v1/stores/${idSes}/items/`,
             dati,
             {
@@ -283,8 +300,7 @@ const generateSesJson = async (client, pv, datiEtichette, finanziaria, scenario,
                 }
             } else { console.log("trovato null") }
         }
-        //console.log(arrayToSes)
-        console.log(arrayErrors)
+
         return { json: arrayToSes, errors: arrayErrors }
     } catch (err) {
         console.log(err)
@@ -297,10 +313,7 @@ const generateSesScenarioJson = async (client, pv, codici, scenario, orientament
 
     let arrayErrors = []
     let arrayToSes = []
-    console.log(scenario)
     for (let y = 0; y < codici.length; y++) {
-        console.log(codici[y])
-
         let labels = await getLabelsFromItem(client, pv, codici[y])
         let idScenario = await getIdScenarioFromName(client, scenario, orientamento)
         if (labels.length > 0) {

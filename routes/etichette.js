@@ -88,7 +88,6 @@ const variazioniAutomatiche = async (pv) => {
     try {
         let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
         let codici = await getCodiciVariazioni(pv, wsi.data.token)
-        //console.log(codici)
         if (codici) {
             if (codici.length > 0) {
                 let finanziaria = null//req.body.finanziaria
@@ -97,20 +96,18 @@ const variazioniAutomatiche = async (pv) => {
 
                 if (datiEtichette) {
                     let json = await generateSesJson(mongoClient, pv, datiEtichette.data, finanziaria, scenario, 'system.user')
-                    //console.log(json)
                     if (json.error) {
                         logger.error("errore nella generazione del json per ses " + json.error)
                     } else {
                         arrayToSes = json.json
                         arrayErrors = json.errors
-                        let resToses = await postItems(mongoClient, pv, arrayToSes)
+                        let resToses = await postItems(pv, arrayToSes)
                         let correlationId = resToses.data.correlationId
 
                         if (correlationId) {
                             let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: 'system', pv: pv, scenario: scenario, finanziaria: finanziaria }
                             addEvent(mongoClient, returnData)
                             logger.info("DataToSes system variazioni automatiche  pv " + pv + " correlationID " + correlationId)
-                            console.log(returnData)
                             return returnData;
 
                         } else {
@@ -162,10 +159,13 @@ router.post('/datatoses', async (req, res, next) => {
                 } else {
                     arrayToSes = json.json
                     arrayErrors = json.errors
-                    let resToses = await postItems(mongoClient, pv, arrayToSes)
-                    let correlationId = resToses.data.correlationId
-                    logger.info("DataToSes " + user + " pv " + pv + " correlationID " + correlationId)
-                    if (correlationId) {
+                    let resToses = await postItems(pv, arrayToSes)
+                    //console.log(resToses)
+
+
+                    if (resToses.data) {
+                        let correlationId = resToses.data.correlationId
+                        logger.info("DataToSes " + user + " pv " + pv + " correlationID " + correlationId)
                         let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria }
                         addEvent(mongoClient, returnData)
                         res.status(200).send(returnData)
@@ -218,7 +218,7 @@ router.get('/getLabelsFromItem', async (req, res, next) => {
         let pv = req.user.pv.sigla
         let codice = req.query.codice
 
-        let result = await getLabelsFromItem(mongoClient, pv, codice)
+        let result = await getLabelsFromItem(pv, codice)
         if (result.status !== 200)
             res.status(404).send(result.response.data.message);
         else
@@ -255,7 +255,6 @@ router.get('/variazioni', async (req, res, next) => {
     try {
         let pv = req.user.pv.sigla
         let variazioni = await getVariazioni(pv, req.user.WSIToken)
-        //console.log(variazioni)
         if (variazioni) {
             res.status(200).send(variazioni.data)
         }
@@ -275,7 +274,6 @@ router.get('/autovariazione', async (req, res, next) => {
     try {
         let pv = req.query.pv
         let variazioni = await variazioniAutomatiche(pv)
-        console.log(variazioni)
         if (variazioni.inviati) {
             res.status(200).send(variazioni)
         }

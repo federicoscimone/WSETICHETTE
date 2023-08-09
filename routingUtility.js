@@ -4,14 +4,16 @@ const tokenKey = process.env.TOKEN_KEY
 const BINDUSER = process.env.BINDUSER
 const BINDUSERPW = process.env.BINDUSERPW
 const mongoDbUrl = process.env.MONGODBURL
+const serviceWSIPass = process.env.SERVICEPASS
+const serviceWSIUser = process.env.SERVICEUSER
 const WSIURL = process.env.WSIURL
 const { MongoClient } = require('mongodb')
 const jwt = require('jsonwebtoken');
 const axios = require('axios')
 const mongoClient = new MongoClient(mongoDbUrl)
 const { authenticate } = require('ldap-authentication')
-const { getNomeDaSigla } = require('./database/puntiVenditaConnection')
 const { findByUsername, updateLastLogin, createUser, findById } = require('./database/utentiConnection')
+const { logger } = require('./logger')
 
 const pvNord = ["VM", "VI", "PD", "VR", "TV", "MN", "UD", "U2", "MV"]
 
@@ -27,6 +29,22 @@ const TA = {
     comune: "CATANIA",
     provincia: "CT",
     cap: "95121"
+}
+
+const getNomeDaSigla = async (sigla) => {
+    let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
+    let resp = await axios({
+        method: 'get', url: WSIURL + '/puntivendita/nomedasigla?pv=' + sigla,
+        headers: {
+            Authorization: `Bearer ${wsi.data.token}`,
+        },
+    }).catch((err) => {
+        console.log(err)
+        logger.error("ERRORE: " + err)
+        return ({ error: "errore recupero collegamento con WSI" })
+    })
+
+    return resp.data
 }
 
 const syncUtente = async (utente) => {
@@ -71,8 +89,8 @@ const getPV = async (groups) => {
             trovato = "PR"
         }
         else {
-            await mongoClient.connect();
-            pvname = await getNomeDaSigla(mongoClient, trovato)
+            pvname = await getNomeDaSigla(trovato)
+            console.log(pvname)
         }
 
         return { sigla: trovato, nome: pvname }

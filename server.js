@@ -1,4 +1,4 @@
-//recupero variabili di ambiente
+//recupero variabili di MODE
 require("dotenv").config();
 const PORT = process.env.PORT;
 const tokenKey = process.env.TOKEN_KEY
@@ -182,9 +182,9 @@ function onListening() {
     logger.info("In ascolto su porta: " + PORT)
 }
 
-if (process.env.AMBIENTE === 'DEV') server.listen(PORT);
+if (process.env.MODE === 'DEV') server.listen(PORT);
 
-if (process.env.AMBIENTE === 'PROD') {
+else {
     server.listen(PORT, "etichette.brunoapps.com");
     server.addContext('etichette.bruno.it', options)
 }
