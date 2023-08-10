@@ -17,17 +17,10 @@ const cron = require('node-cron');
 
 const { getScenariosName } = require('../database/etagConnection')
 const { addEvent } = require('../database/utentiConnection')
-const { getLabelsFromItem, postItems, generateSesJson, generateSesScenarioJson } = require('../sesApi')
+const { getLabelsFromItem, postItems, generateSesJson } = require('../sesApi')
 const { generaTokenWSI } = require('../routingUtility')
 const mongoClient = new MongoClient(mongoDbUrl)
-
 const connectString = "DSN=AS400;UserID=ACCLINUX;Password=ACCLINOX"
-
-const connectionConfig = {
-    connectionString: connectString,
-    connectionTimeout: 3,
-    loginTimeout: 3,
-}
 
 //SCHEDULING per le variazioni automatiche, impostato per ogni giorno 06:30, 07:30, 08:30
 // aggiungere i punti vendita che passano alla nuova app o creare loop che invia lo stesso comando per tutte le sedi
@@ -187,29 +180,7 @@ router.post('/datatoses', async (req, res, next) => {
 })
 
 
-//WIP
-router.post('/scenariotoses', async (req, res, next) => {
-    try {
-        let pv = req.user.pv.sigla
-        let user = req.user.username
-        let arrayToSes = []
-        let arrayErrors = []
-        let codici = req.body.codici
-        let scenario = req.body.scenario
-        let orientamento = req.body.orientamento
-        let jsonToses = await generateSesScenarioJson(mongoClient, pv, codici, scenario, orientamento)
 
-        res.status(200).send(jsonToses)
-        if (codici.length > 0 && scenario) {
-
-        } else {
-            res.status(400).send({ error: "errore nessun codice trasmesso" })
-        }
-    } catch (err) {
-        console.log(err)
-        logger.error(err)
-    }
-})
 
 // ottieni gli id delle etichette associate al codice
 router.get('/getLabelsFromItem', async (req, res, next) => {
@@ -251,12 +222,35 @@ function formatDataToAS(data) {
 
 
 // ottieni gli id delle etichette associate al codice
-router.get('/variazioni', async (req, res, next) => {
+router.get('/variazioni', async (req, res, next) => { // se aggiunti ?group=true vengono restituite le variazioni raggruppate per settore gruppo sottogruppo
     try {
         let pv = req.user.pv.sigla
+        let group = req.query.group
         let variazioni = await getVariazioni(pv, req.user.WSIToken)
+
         if (variazioni) {
-            res.status(200).send(variazioni.data)
+            if (group === "true") {
+                let varArr = variazioni.data
+                let arrayFam = []
+                for (let i = 0; i < varArr.length; i++) {
+                    let famiglia = varArr[i].LSSFAM.trim()
+                    let gruppo = varArr[i].ANGRUP.trim()
+                    let sottoGruppo = varArr[i].ANSTGR.trim()
+                    let descrizione = varArr[i].LSDESC.trim()
+                    let codice = varArr[i].ANCODI.trim()
+                    let trovatoIndex = arrayFam.findIndex(e => { return e.famiglia === famiglia })
+                    if (trovatoIndex >= 0) {
+                        arrayFam[trovatoIndex].codici.push(codice)
+                    } else {
+                        arrayFam.push({ famiglia: famiglia, gruppo: gruppo, sottoGruppo: sottoGruppo, descrizione: descrizione, codici: [codice] })
+                    }
+                }
+                res.status(200).send(arrayFam)
+            }
+            else {
+                res.status(200).send(variazioni.data)
+            }
+
         }
         else {
             res.status(404).send({ errors: "errore nell'ottenimento delle variazioni prezzo" });

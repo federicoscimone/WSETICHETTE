@@ -12,9 +12,8 @@ const jwt = require('jsonwebtoken');
 const axios = require('axios')
 const mongoClient = new MongoClient(mongoDbUrl)
 const { authenticate } = require('ldap-authentication')
-const { findByUsername, updateLastLogin, createUser, findById } = require('./database/utentiConnection')
+const { findByUsername, updateLastLogin, createUser } = require('./database/utentiConnection')
 const { logger } = require('./logger')
-
 const pvNord = ["VM", "VI", "PD", "VR", "TV", "MN", "UD", "U2", "MV"]
 
 const MV = {
