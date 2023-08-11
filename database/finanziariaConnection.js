@@ -9,13 +9,13 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
         if (finanziaria === 'Tan 0 Taeg 0') {
             finData.tan = 0
             finData.taeg = 0
-            finData.proroga = "Ottobre 2024"
+            finData.proroga = ""
             if (prezzo > 398 && prezzo < 1000) {
                 finData.nrate = 10
                 finData.rata = prezzo / finData.nrate
             } else
                 if (prezzo >= 1000 && prezzo < 5000) {
-                    finData.nrate = 20
+                    finData.nrate = 10
                     finData.rata = prezzo / finData.nrate
                 }
                 else {
