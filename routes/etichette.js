@@ -88,7 +88,7 @@ const variazioniAutomatiche = async (pv) => {
                 let datiEtichette = await getDatiEtichette(pv, codici, wsi.data.token)
 
                 if (datiEtichette) {
-                    let json = await generateSesJson(mongoClient, pv, datiEtichette.data, finanziaria, scenario, 'system.user')
+                    let json = await generateSesJson(pv, datiEtichette.data, finanziaria, scenario, 'system.user')
                     if (json.error) {
                         logger.error("errore nella generazione del json per ses " + json.error)
                     } else {
@@ -128,6 +128,44 @@ const variazioniAutomatiche = async (pv) => {
     }
 }
 
+// invio dati associazione etichetta -----------------> WIP <-------------------
+router.post('/matching', async (req, res, next) => {
+    try {
+        let pv = req.user.pv.sigla
+        let user = req.user.username
+
+        let codice = req.body.codice
+        let label = req.body.label
+        if (codice.length > 0) {
+            let finanziaria = req.body.finanziaria
+            let scenario = req.body.scenario
+            let datiEtichette = await getDatiEtichette(pv, [codice], req.user.WSIToken)
+            console.log(datiEtichette)
+            if (datiEtichette) {
+                let resToses = await postItems(pv, arrayToSes)
+                console.log(resToses)
+                if (resToses.data) {
+                    let correlationId = resToses.data.correlationId
+                    logger.info("matching " + user + " pv " + pv + " correlationID " + correlationId + " label " + label + " code " + codice)
+                    let returnData = { inviati: codice, correlationId: correlationId, utente: user, pv: pv, scenario: scenario }
+                    addEvent(mongoClient, returnData)
+                    res.status(200).send(returnData)
+                } else {
+                    res.status(400).send({ error: "errore nella comunicazione con SES" })
+                }
+
+            }
+            else {
+                res.status(400).send({ error: "errore nel recupero dei dati dell'articol0" })
+            }
+        } else {
+            res.status(400).send({ error: "errore manca scenario o codici" })
+        }
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+})
 
 // invio dati prodotto a ses
 router.post('/datatoses', async (req, res, next) => {
@@ -145,7 +183,7 @@ router.post('/datatoses', async (req, res, next) => {
             let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
 
             if (datiEtichette) {
-                let json = await generateSesJson(mongoClient, pv, datiEtichette.data, finanziaria, scenario, user)
+                let json = await generateSesJson(pv, datiEtichette.data, finanziaria, scenario, user)
 
                 if (json.error) {
                     res.status(400).send(json[0].custom)
@@ -178,8 +216,6 @@ router.post('/datatoses', async (req, res, next) => {
         logger.error(err)
     }
 })
-
-
 
 
 // ottieni gli id delle etichette associate al codice

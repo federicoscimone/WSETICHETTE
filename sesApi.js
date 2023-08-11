@@ -68,9 +68,10 @@ const postItems = async (siglapv, dati) => {
 }
 
 
-const generateSesJson = async (client, pv, datiEtichette, finanziaria, scenario, user) => {
+const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) => {
     try {
-
+        if (scenario === "dataOnly") scenario = null
+        console.log(finanziaria)
         if (finanziaria) {
             for (let i = 0; i < datiEtichette.length; i++) {
                 if (!datiEtichette[i].error) {
