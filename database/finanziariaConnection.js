@@ -30,19 +30,19 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
 
                 if (prezzo > 298.99 && prezzo <= 1499.99) {
                     finData.nrate = 20
-                    finData.taeg = 10.78
+                    finData.taeg = 11.58
                     finData.spese = ((prezzo * 0.7) / 100) * finData.nrate
                     finData.rata = (finData.spese + prezzo) / finData.nrate
                 } else
                     if (prezzo >= 1500 && prezzo <= 2499.99) {
                         finData.nrate = 26
-                        finData.taeg = 11.62
+                        finData.taeg = 12.35
                         finData.spese = ((prezzo * 0.7) / 100) * finData.nrate
                         finData.rata = (finData.spese + prezzo) / finData.nrate
                     } else
                         if (prezzo >= 2500 && prezzo <= 5000.99) {
                             finData.nrate = 32
-                            finData.taeg = 12.19
+                            finData.taeg = 12.84
                             finData.spese = ((prezzo * 0.7) / 100) * finData.nrate
                             finData.rata = (finData.spese + prezzo) / finData.nrate
                         } else { finData.error = "Importo da finanziare fuori range" }
