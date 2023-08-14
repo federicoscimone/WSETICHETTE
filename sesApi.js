@@ -173,7 +173,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                             if (!datiEtichette[y].datiFin.error && toSES.custom.prezzoMinimo <= toSES.price) {
                                 // allora applico lo scenario Finanziaria
                                 scenarioToses = 'TASSO0'
-                                arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo  > prezzo mimino e importo, applicato scenario Finanziaria` })
+                                arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo  > prezzo mimino, applicato scenario Finanziaria` })
                             }
 
                         }
@@ -246,7 +246,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                             if (!datiEtichette[y].datiFin.error && toSES.custom.prezzoMinimo <= toSES.price) {
                                 // allora applico lo scenario Finanziaria
                                 scenarioToses = 'T0VERT'
-                                arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo  > prezzo mimino e importo, applicato scenario Finanziaria` })
+                                arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo  > prezzo mimino, applicato scenario Finanziaria` })
                             }
 
                         }
@@ -352,6 +352,7 @@ const generateSesScenarioJson = async (client, pv, codici, scenario, orientament
           }*/
     }
     return { json: arrayToSes, errors: arrayErrors }
+
 }
 
 module.exports = {
