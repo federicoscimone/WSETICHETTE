@@ -71,7 +71,7 @@ const postItems = async (siglapv, dati) => {
 const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) => {
     try {
         if (scenario === "dataOnly") scenario = null
-        console.log(finanziaria)
+        //console.log(finanziaria)
         if (finanziaria) {
             for (let i = 0; i < datiEtichette.length; i++) {
                 if (!datiEtichette[i].error) {
@@ -297,6 +297,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                         if (datiEtichette[y].icon.IDICO6) toSES.custom.ico6 = datiEtichette[y].icon.IDICO6.toString()
                         if (datiEtichette[y].icon.VALUE6) toSES.custom.icovalue6 = datiEtichette[y].icon.VALUE6 === '0' ? "" : datiEtichette[y].icon.VALUE6.toString()
                     }
+                    //console.log(toSES)
                     arrayToSes.push(toSES)
                 }
             } else { console.log("trovato null") }

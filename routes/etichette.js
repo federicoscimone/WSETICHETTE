@@ -79,16 +79,20 @@ const getVariazioni = async (pv, token) => {
 
 const variazioniAutomatiche = async (pv) => {
     try {
+        //console.log(pv)
         let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
-        let codici = await getCodiciVariazioni(pv, wsi.data.token)
+        //let codici = await getCodiciVariazioni(pv, wsi.data.token)
+        codici = ["WW11BGA046AT", "KFN96VPEA", "B10215"]
+        console.log(codici)
         if (codici) {
             if (codici.length > 0) {
-                let finanziaria = null//req.body.finanziaria
+                let finanziaria = "autovariazione"//req.body.finanziaria
                 let scenario = null//req.body.scenario
                 let datiEtichette = await getDatiEtichette(pv, codici, wsi.data.token)
 
                 if (datiEtichette) {
                     let json = await generateSesJson(pv, datiEtichette.data, finanziaria, scenario, 'system.user')
+
                     if (json.error) {
                         logger.error("errore nella generazione del json per ses " + json.error)
                     } else {
@@ -129,34 +133,45 @@ const variazioniAutomatiche = async (pv) => {
 }
 
 // invio dati associazione etichetta -----------------> WIP <-------------------
-router.post('/matching', async (req, res, next) => {
+router.post('/match', async (req, res, next) => {
     try {
         let pv = req.user.pv.sigla
         let user = req.user.username
+        let arrayToSes = []
+        let arrayErrors = []
 
-        let codice = req.body.codice
-        let label = req.body.label
-        if (codice.length > 0) {
+        let codici = req.body.codici
+        if (codici.length > 0) {
             let finanziaria = req.body.finanziaria
             let scenario = req.body.scenario
-            let datiEtichette = await getDatiEtichette(pv, [codice], req.user.WSIToken)
-            console.log(datiEtichette)
-            if (datiEtichette) {
-                let resToses = await postItems(pv, arrayToSes)
-                console.log(resToses)
-                if (resToses.data) {
-                    let correlationId = resToses.data.correlationId
-                    logger.info("matching " + user + " pv " + pv + " correlationID " + correlationId + " label " + label + " code " + codice)
-                    let returnData = { inviati: codice, correlationId: correlationId, utente: user, pv: pv, scenario: scenario }
-                    addEvent(mongoClient, returnData)
-                    res.status(200).send(returnData)
-                } else {
-                    res.status(400).send({ error: "errore nella comunicazione con SES" })
-                }
 
+            let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
+
+            if (datiEtichette) {
+                let json = await generateSesJson(pv, datiEtichette.data, finanziaria, scenario, user)
+
+                if (json.error) {
+                    res.status(400).send(json[0].custom)
+                } else {
+                    arrayToSes = json.json
+                    arrayErrors = json.errors
+                    let resToses = await postItems(pv, arrayToSes)
+                    //console.log(resToses)
+
+
+                    if (resToses.data) {
+                        let correlationId = resToses.data.correlationId
+                        logger.info("DataToSes " + user + " pv " + pv + " correlationID " + correlationId)
+                        let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria }
+                        addEvent(mongoClient, returnData)
+                        res.status(200).send(returnData)
+                    } else {
+                        res.status(400).send({ error: "errore nella comunicazione con SES" })
+                    }
+                }
             }
             else {
-                res.status(400).send({ error: "errore nel recupero dei dati dell'articol0" })
+                res.status(400).send({ error: "errore nel recupero dei dati degli articoli" })
             }
         } else {
             res.status(400).send({ error: "errore manca scenario o codici" })
@@ -177,14 +192,14 @@ router.post('/datatoses', async (req, res, next) => {
 
         let codici = req.body.codici
         if (codici.length > 0) {
-            let finanziaria = req.body.finanziaria
+            let finanziaria = "autoassegna"//req.body.finanziaria
             let scenario = req.body.scenario
 
             let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
 
             if (datiEtichette) {
                 let json = await generateSesJson(pv, datiEtichette.data, finanziaria, scenario, user)
-
+                // console.log(json)
                 if (json.error) {
                     res.status(400).send(json[0].custom)
                 } else {

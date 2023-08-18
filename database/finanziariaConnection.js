@@ -5,6 +5,15 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
     try {
         let finData = { nrate: 0, rata: 0, tan: 0, taeg: 0, proroga: "0", spese: 0 }
 
+        if (prezzo < 1000 && pv === 'LC') {
+            finanziaria = 'Tan 0 Taeg 0'
+        }
+        else {
+            finanziaria = 'Tan 0 Taeg Variabile'
+        }
+
+        //  console.log(finanziaria)
+
         //finanziaria tan e taeg zero
         if (finanziaria === 'Tan 0 Taeg 0') {
             finData.tan = 0
@@ -57,7 +66,7 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
             finData.tan = finData.tan.toFixed(2)
             finData.taeg = finData.taeg.toFixed(2)
         }
-
+        //console.log(finData)
         return finData
     } catch (err) {
         logger.error("ERRORE: " + err)
