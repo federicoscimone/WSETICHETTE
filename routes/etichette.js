@@ -226,6 +226,7 @@ router.post('/datatoses', async (req, res, next) => {
         } else {
             res.status(400).send({ error: "errore manca scenario o codici" })
         }
+
     } catch (err) {
         console.log(err)
         logger.error(err)
