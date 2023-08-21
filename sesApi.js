@@ -68,6 +68,42 @@ const postItems = async (siglapv, dati) => {
 }
 
 
+const matchItems = async (siglapv, labelID, scenarioID, itemID) => {
+    try {
+        let dati =
+            [
+                {
+                    labelId: labelID,
+                    scenarioId: scenarioID,
+                    items: [
+                        {
+                            itemId: itemID
+                        }
+                    ]
+                }
+            ]
+
+        let idSes = (siglapv === 'PR') ? 'brunoeuronics_it.vlab' : await getSesId(siglapv)
+        let result = await axios.post(`https://api-eu.vusion.io/vcloud/v1/stores/${idSes}/labels/matchings`,
+            dati,
+            {
+                headers: {
+                    'Ocp-Apim-Subscription-Key': SESKEY
+                }
+            }).catch(err => {
+                logger.error(err)
+                return err
+            })
+        return result
+
+    } catch (err) {
+        console.log(err)
+        logger.error("errore " + err)
+    }
+}
+
+
+
 const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) => {
     try {
         if (scenario === "dataOnly") scenario = null
@@ -132,7 +168,6 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
 
                         //  GESTIONE SCENARI NON APPLICABILI - UNA SERIE DI CONDIZIONI CHE IN CASO DI SCENARIO NON APPLICABILE NE SCELGONO IL PIU VICINO CHE PUò ESSERE APPLICATO
 
-
                         //SCENARI ORIZZONTALI   
                         //se lo scenario è Prezzo Tagliato ma il prezzo minimo non è valido
                         if (scenario === 'NOPROMO' && toSES.custom.prezzoMinimo <= toSES.price) {
@@ -167,7 +202,6 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                                 scenarioToses = 'NOPROMO'
                                 arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Importo non finanziabile, applicato scenario Prezzo Tagliato` })
                             }
-
 
                             // se l'importo è finanziabile e il prezzo minimo non è valido
                             if (!datiEtichette[y].datiFin.error && toSES.custom.prezzoMinimo <= toSES.price) {
@@ -360,5 +394,6 @@ module.exports = {
     getLabelsFromItem: getLabelsFromItem,
     postItems: postItems,
     generateSesJson: generateSesJson,
-    generateSesScenarioJson: generateSesScenarioJson
+    generateSesScenarioJson: generateSesScenarioJson,
+    matchItems: matchItems
 }

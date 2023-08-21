@@ -17,7 +17,7 @@ const cron = require('node-cron');
 
 const { getScenariosName } = require('../database/etagConnection')
 const { addEvent } = require('../database/utentiConnection')
-const { getLabelsFromItem, postItems, generateSesJson } = require('../sesApi')
+const { getLabelsFromItem, postItems, generateSesJson, matchItems } = require('../sesApi')
 const { generaTokenWSI } = require('../routingUtility')
 const mongoClient = new MongoClient(mongoDbUrl)
 const connectString = "DSN=AS400;UserID=ACCLINUX;Password=ACCLINOX"
@@ -79,10 +79,10 @@ const getVariazioni = async (pv, token) => {
 
 const variazioniAutomatiche = async (pv) => {
     try {
-        //console.log(pv)
+
         let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
-        //let codici = await getCodiciVariazioni(pv, wsi.data.token)
-        codici = ["WW11BGA046AT", "KFN96VPEA", "B10215"]
+        let codici = await getCodiciVariazioni(pv, wsi.data.token)
+
         console.log(codici)
         if (codici) {
             if (codici.length > 0) {
@@ -102,7 +102,7 @@ const variazioniAutomatiche = async (pv) => {
                         let correlationId = resToses.data.correlationId
 
                         if (correlationId) {
-                            let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: 'system', pv: pv, scenario: scenario, finanziaria: finanziaria }
+                            let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: 'system', pv: pv, scenario: scenario, finanziaria: finanziaria, type: "autoVariazione" }
                             addEvent(mongoClient, returnData)
                             logger.info("DataToSes system variazioni automatiche  pv " + pv + " correlationID " + correlationId)
                             return returnData;
@@ -132,7 +132,7 @@ const variazioniAutomatiche = async (pv) => {
     }
 }
 
-// invio dati associazione etichetta -----------------> WIP <-------------------
+// invio dati associazione etichetta 
 router.post('/match', async (req, res, next) => {
     try {
         let pv = req.user.pv.sigla
@@ -144,11 +144,11 @@ router.post('/match', async (req, res, next) => {
         if (codici.length > 0) {
             let finanziaria = req.body.finanziaria
             let scenario = req.body.scenario
-
+            let label = req.body.label
             let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
 
             if (datiEtichette) {
-                let json = await generateSesJson(pv, datiEtichette.data, finanziaria, scenario, user)
+                let json = await generateSesJson(pv, datiEtichette.data, "finanziaria", scenario, user)
 
                 if (json.error) {
                     res.status(400).send(json[0].custom)
@@ -161,10 +161,21 @@ router.post('/match', async (req, res, next) => {
 
                     if (resToses.data) {
                         let correlationId = resToses.data.correlationId
-                        logger.info("DataToSes " + user + " pv " + pv + " correlationID " + correlationId)
-                        let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria }
-                        addEvent(mongoClient, returnData)
-                        res.status(200).send(returnData)
+
+                        // invio a ses il matching con l'etichetta dopo l'invio dei dati
+                        let matchToses = await matchItems(pv, label, scenario, codici[0])
+                        if (matchToses.data) {
+                            let correlationMatchId = matchToses.data.correlationId
+
+                            logger.info("DataToSes " + user + " pv " + pv + " correlationID " + correlationId + " correlationMatchId " + correlationMatchId)
+                            let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, correlationMatchId: correlationMatchId, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria, type: "match", label: label }
+                            addEvent(mongoClient, returnData)
+                            res.status(200).send(returnData)
+                        } else {
+                            res.status(400).send({ error: "errore nella comunicazione con SES durante il matching con l'etichetta " + label })
+                        }
+
+
                     } else {
                         res.status(400).send({ error: "errore nella comunicazione con SES" })
                     }
@@ -212,7 +223,7 @@ router.post('/datatoses', async (req, res, next) => {
                     if (resToses.data) {
                         let correlationId = resToses.data.correlationId
                         logger.info("DataToSes " + user + " pv " + pv + " correlationID " + correlationId)
-                        let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria }
+                        let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria, type: "update" }
                         addEvent(mongoClient, returnData)
                         res.status(200).send(returnData)
                     } else {
