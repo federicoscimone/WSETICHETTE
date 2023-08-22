@@ -3,6 +3,9 @@ const logger = require("../logger")
 
 async function getDatiFinanziaria(prezzo, pv, finanziaria) {
     try {
+        let now = new Date()
+
+
         let finData = { nrate: 0, rata: 0, tan: 0, taeg: 0, proroga: "0", spese: 0 }
 
         if (prezzo < 1000 && pv === 'LC') {
@@ -11,6 +14,10 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
         else {
             finanziaria = 'Tan 0 Taeg Variabile'
         }
+
+        if (now > new Date('2023-08-23')) finanziaria = 'Tan 0 Taeg 0'
+
+        if (pv === 'PR') finanziaria = 'Rata chiara'
 
         //  console.log(finanziaria)
 
@@ -55,8 +62,28 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
                             finData.spese = ((prezzo * 0.7) / 100) * finData.nrate
                             finData.rata = (finData.spese + prezzo) / finData.nrate
                         } else { finData.error = "Importo da finanziare fuori range" }
+
             } else {
-                finData.error = "Finanziaria non trovata"
+                if (finanziaria === 'Rata chiara') {
+                    finData.proroga = "dopo 3 mesi"
+                    if (prezzo < 999.99) {
+                        finData.nrate = 22
+                        finData.taeg = 11.12
+                        finData.tan = 10.60
+                        finData.spese = prezzo * 0.0011
+                        finData.rata = (prezzo / (finData.nrate - 2)) + finData.spese
+                    } else {
+                        finData.nrate = 33
+                        finData.taeg = 9.39
+                        finData.tan = 9.00
+                        finData.spese = prezzo * 0.00152
+                        finData.rata = (prezzo / (finData.nrate - 3)) + finData.spese
+                    }
+                }
+                else {
+                    finData.error = "Finanziaria non trovata"
+                }
+
             }
         }
 
@@ -66,7 +93,7 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
             finData.tan = finData.tan.toFixed(2)
             finData.taeg = finData.taeg.toFixed(2)
         }
-        //console.log(finData)
+        console.log(finData)
         return finData
     } catch (err) {
         logger.error("ERRORE: " + err)
