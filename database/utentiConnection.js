@@ -56,7 +56,7 @@ async function updateLastLogin(client, utente) {
         let query = { username: utente.username }
         utenti.updateOne(query, { $set: { lastLogin: new Date() } }, (err, res) => {
             if (err) throw err;
-            console.log(res)
+            //   console.log(res)
 
             return res
         })

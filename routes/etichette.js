@@ -89,8 +89,6 @@ const variazioniAutomatiche = async (pv) => {
 
         let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
         let codici = await getCodiciVariazioni(pv, wsi.data.token)
-
-        console.log(codici)
         if (codici) {
             if (codici.length > 0) {
                 let finanziaria = "autovariazione"//req.body.finanziaria

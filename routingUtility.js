@@ -105,7 +105,7 @@ const getPV = async (groups) => {
         }
         else {
             pvname = await getNomeDaSigla(trovato)
-            console.log(pvname)
+            // console.log(pvname)
         }
 
         return { sigla: trovato, nome: pvname }
