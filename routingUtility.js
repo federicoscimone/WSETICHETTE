@@ -46,6 +46,22 @@ const getNomeDaSigla = async (sigla) => {
     return resp.data
 }
 
+const getPvDict = async (filter) => {
+    let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
+    let resp = await axios({
+        method: 'get', url: `${WSIURL}/puntivendita/dict${filter === 'vusion' ? '?filter=vusion' : ''}`,
+        headers: {
+            Authorization: `Bearer ${wsi.data.token}`,
+        },
+    }).catch((err) => {
+        console.log(err)
+        logger.error("ERRORE: " + err)
+        return ({ error: "errore recupero collegamento con WSI" })
+    })
+
+    return resp.data
+}
+
 const syncUtente = async (utente) => {
     await mongoClient.connect();
     let utenteWSI = await findByUsername(mongoClient, utente.username)
@@ -110,6 +126,7 @@ const onPvGroup = (groups) => {
 }
 
 const getRole = (groups) => {
+    if (groups.includes('Etichette Special')) return "special"
     let pvgr = onPvGroup(groups)
     if (pvgr) {
         if (pvgr === "Area_Vendita" || pvgr === "Area_Finanziaria") return "rc"
@@ -117,8 +134,8 @@ const getRole = (groups) => {
         if (pvgr === "Area_Logistica") return "mag"
         if (pvgr === "Area_Logistica_MV") return "mag"
     } else {
-        if (groups.includes('SpedizioniEC Admin')) return "adminSpedizioni"
-        else if (groups[0]) return groups[0]
+
+        if (groups[0]) return groups[0]
     } return false
 }
 
@@ -143,7 +160,7 @@ const authenticateJWT = (req, res, next) => {
 // verifica role ADMIN o TL
 const isAdmin = (req, res, next) => {
     const currRole = req.user.role
-    if (currRole === "admin" || currRole === "tl") {
+    if (currRole === "admin" || currRole === "special") {
         next()
     } else {
         res.status(401).json({ "error": 'non hai i permessi necessari' });
@@ -196,5 +213,6 @@ module.exports = {
     MV: MV,
     TA: TA,
     pvNord: pvNord,
-    syncUtente: syncUtente
+    syncUtente: syncUtente,
+    getPvDict: getPvDict
 }

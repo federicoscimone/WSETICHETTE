@@ -1,11 +1,11 @@
 require("dotenv").config();
 const logger = require("../logger")
+const dbFinanz = "etag"
+const collFinanz = 'finanziarie'
 
 async function getDatiFinanziaria(prezzo, pv, finanziaria) {
     try {
         let now = new Date()
-
-
         let finData = { nrate: 0, rata: 0, tan: 0, taeg: 0, proroga: "0", spese: 0 }
 
         if (prezzo < 1000 && pv === 'LC') {
@@ -17,15 +17,14 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
 
         if (now > new Date('2023-08-23')) finanziaria = 'Tan 0 Taeg 0'
 
-        if (pv === 'PR') finanziaria = 'Rata chiara'
-
+        //if (pv === 'PR') finanziaria = 'Rata chiara'
         //  console.log(finanziaria)
 
         //finanziaria tan e taeg zero
         if (finanziaria === 'Tan 0 Taeg 0') {
             finData.tan = 0
             finData.taeg = 0
-            finData.proroga = ""
+            finData.proroga = "dopo 30 giorni"
             if (prezzo > 398 && prezzo < 1000) {
                 finData.nrate = 10
                 finData.rata = prezzo / finData.nrate
@@ -93,7 +92,7 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
             finData.tan = finData.tan.toFixed(2)
             finData.taeg = finData.taeg.toFixed(2)
         }
-        console.log(finData)
+        // console.log(finData)
         return finData
     } catch (err) {
         logger.error("ERRORE: " + err)
@@ -101,6 +100,19 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
     }
 }
 
+// recupera ultimi X eventi
+async function getFinanziarie(client) {
+    try {
+        const finanz = client.db(dbFinanz).collection(collFinanz);
+        const result = await finanz.find().sort({ dataUltimaModifica: -1 }).toArray()
+        return result
+    } catch (err) {
+        console.log(err)
+        return err;
+    }
+}
+
 module.exports = {
     getDatiFinanziaria: getDatiFinanziaria,
+    getFinanziarie: getFinanziarie
 }

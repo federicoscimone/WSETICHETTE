@@ -7,7 +7,7 @@ const MODE = process.env.MODE
 const WSIURL = process.env.WSIURL
 
 const fs = require('fs');
-const { authenticateJWT, ldapAuthentication, getRole, getPV, syncUtente, generaTokenWSI } = require('./routingUtility')
+const { authenticateJWT, ldapAuthentication, getRole, getPV, syncUtente, generaTokenWSI, getPvDict } = require('./routingUtility')
 
 let debug = require('debug')('backend:server');
 const express = require('express');
@@ -41,6 +41,7 @@ const morganMiddleware = morgan(
 
 const etichette = require('./routes/etichette')
 const utenti = require('./routes/utenti')
+const finanziarie = require('./routes/finanziarie')
 app.use(morgan('dev'));
 app.use(morganMiddleware);
 
@@ -59,6 +60,9 @@ app.use(bodyParser.urlencoded({
     parameterLimit: 10000000,
 }));
 app.use(bodyParser.json());
+
+
+
 
 //LDAP LOGIN
 app.post("/ldapLogin", async (req, res) => {
@@ -129,12 +133,21 @@ app.get('/', authenticateJWT, (req, res, next) => {
     res.send('Hello from Bruno Web Service!');
 });
 
+app.get("/pvdict", authenticateJWT, async (req, res) => {
+    try {
+        let filter = req.query.filter
+        let pvdict = await getPvDict(filter)
+        res.status(202).json(pvdict)
+    } catch (err) { console.log(err) }
+})
+
 app.get('/checkUser', authenticateJWT, function (req, res, next) {
     res.send(req.user);
 })
 
 app.use('/etichette', authenticateJWT, etichette)
 app.use('/utenti', authenticateJWT, utenti)
+app.use('/finanziarie', authenticateJWT, finanziarie)
 
 app.use((req, res, next) => {
     res.status(404).json({ "error": '404 percorso non trovato' });

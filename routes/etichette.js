@@ -3,7 +3,7 @@ const mongoDbUrl = process.env.MONGODBURL
 const MINIMOFIN = process.env.MINIMOFIN
 const serviceWSIUser = process.env.SERVICEUSER
 const serviceWSIPass = process.env.SERVICEPASS
-
+const MODE = process.env.MODE
 
 const WSIURL = process.env.WSIURL
 const fs = require("fs").promises;
@@ -26,8 +26,15 @@ const connectString = "DSN=AS400;UserID=ACCLINUX;Password=ACCLINOX"
 // aggiungere i punti vendita che passano alla nuova app o creare loop che invia lo stesso comando per tutte le sedi
 
 cron.schedule('30 6,7,8 * * *', async () => {
-    variazioniAutomatiche('LC')
-    logger.info("INVIO VARIAZIONI AUTOMATICHE PER LC")
+
+    if (MODE === 'PROD') {
+        variazioniAutomatiche('MI')
+        variazioniAutomatiche('LC')
+        variazioniAutomatiche('TV')
+        variazioniAutomatiche('CE')
+        logger.info("INVIO VARIAZIONI AUTOMATICHE")
+    }
+
 });
 
 const getDatiEtichette = async (pv, codici, token) => {
@@ -135,7 +142,7 @@ const variazioniAutomatiche = async (pv) => {
 // invio dati associazione etichetta 
 router.post('/match', async (req, res, next) => {
     try {
-        let pv = req.user.pv.sigla
+        let pv = req.query.pv ? req.query.pv : req.user.pv.sigla
         let user = req.user.username
         let arrayToSes = []
         let arrayErrors = []
@@ -157,7 +164,6 @@ router.post('/match', async (req, res, next) => {
                     arrayErrors = json.errors
                     let resToses = await postItems(pv, arrayToSes)
                     //console.log(resToses)
-
 
                     if (resToses.data) {
                         let correlationId = resToses.data.correlationId
@@ -196,7 +202,7 @@ router.post('/match', async (req, res, next) => {
 // invio dati prodotto a ses
 router.post('/datatoses', async (req, res, next) => {
     try {
-        let pv = req.user.pv.sigla
+        let pv = req.query.pv ? req.query.pv : req.user.pv.sigla
         let user = req.user.username
         let arrayToSes = []
         let arrayErrors = []
@@ -287,7 +293,7 @@ function formatDataToAS(data) {
 // ottieni gli id delle etichette associate al codice
 router.get('/variazioni', async (req, res, next) => { // se aggiunti ?group=true vengono restituite le variazioni raggruppate per settore gruppo sottogruppo
     try {
-        let pv = req.user.pv.sigla
+        let pv = req.query.pv ? req.query.pv : req.user.pv.sigla
         let group = req.query.group
         let variazioni = await getVariazioni(pv, req.user.WSIToken)
 
