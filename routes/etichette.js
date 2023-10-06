@@ -14,7 +14,7 @@ const odbc = require("odbc");
 const { MongoClient } = require('mongodb')
 const axios = require('axios')
 const cron = require('node-cron');
-
+const { getDatiArticolo, getVariazioniFunc } = require('../asFunction')
 const { getScenariosName } = require('../database/etagConnection')
 const { addEvent } = require('../database/utentiConnection')
 const { getLabelsFromItem, postItems, generateSesJson, matchItems } = require('../sesApi')
@@ -37,63 +37,75 @@ cron.schedule('30 6,7,8 * * *', async () => {
 
 });
 
-const getDatiEtichette = async (pv, codici, token) => {
-    return await axios({
-        method: 'get', url: WSIURL + '/as400/codelabeldata',
-        headers: {
-            Authorization: `Bearer ${token}`,
-        },
-        data: {
-            pv: pv,
-            codici: codici
+const getDatiEtichette = async (pv, codici) => {
+    try {
+        if (pv === "PR") pv = 'MI'
+        let result = []
+        if (codici) {
+            let datoProvv = {}
+            for (let i = 0; i < codici.length; i++) {
+                datoProvv = await getDatiArticolo(codici[i], pv)
+                result.push(datoProvv)
+            }
+            if (result[0]) {
+                return result
+            }
+            else {
+                return false
+            }
+        } else {
+            return ("Mancano dati necessari");
         }
-    }).catch((err) => {
+    } catch (err) {
         console.log(err)
-        logger.error("ERRORE: " + err)
-        return ({ error: "errore connessione WSI" })
-    })
+        logger.error(err)
+    }
 }
 
 
-const getCodiciVariazioni = async (pv, token) => {
-    let variazioni = await axios({
-        method: 'get', url: WSIURL + `/as400/variazioni?data=${formatDataToAS(new Date())}&pv=${pv}`,
-        headers: {
-            Authorization: `Bearer ${token}`,
-        }
-    }).catch((err) => {
+const getCodiciVariazioni = async (pv) => {
+    try {
+        let data = formatDataToAS(new Date())
+        if (pv === 'PR') pv = 'MI'
+        let result = await getVariazioniFunc(data, pv)
+        if (result.error)
+            return false
+        else
+            return result.map(x => { return x.ANCODI.trim() })
+    } catch (err) {
         console.log(err)
-        logger.error("ERRORE recupero variazioni prezzo: " + err)
-        return ({ error: "errore connessione WSI " })
-    })
-
-    return variazioni.data.map(x => { return x.ANCODI.trim() })
+        logger.error(err)
+    }
 }
 
-const getVariazioni = async (pv, token) => {
-    return await axios({
-        method: 'get', url: WSIURL + `/as400/variazioni?data=${formatDataToAS(new Date())}&pv=${pv}`,
-        headers: {
-            Authorization: `Bearer ${token}`,
-        }
-    }).catch((err) => {
+
+const getVariazioni = async (pv) => {
+    try {
+        let data = formatDataToAS(new Date())
+        if (pv === 'PR') pv = 'MI'
+        let result = await getVariazioniFunc(data, pv)
+        if (result.error)
+            return false
+        else
+            return result
+    } catch (err) {
         console.log(err)
-        logger.error("ERRORE recupero variazioni prezzo: " + err)
-        return ({ error: "errore connessione WSI " })
-    })
+        logger.error(err)
+    }
 
 }
 
 const variazioniAutomatiche = async (pv) => {
     try {
 
-        let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
-        let codici = await getCodiciVariazioni(pv, wsi.data.token)
+        //let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
+        let codici = await getCodiciVariazioni(pv)
         if (codici) {
             if (codici.length > 0) {
                 let finanziaria = "autovariazione"//req.body.finanziaria
                 let scenario = null//req.body.scenario
-                let datiEtichette = await getDatiEtichette(pv, codici, wsi.data.token)
+                let datiEtichette = await getDatiEtichette(pv, codici)
+                console.log(datiEtichette)
 
                 if (datiEtichette) {
                     let json = await generateSesJson(pv, datiEtichette.data, finanziaria, scenario, 'system.user')
@@ -153,7 +165,7 @@ router.post('/match', async (req, res, next) => {
             let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
 
             if (datiEtichette) {
-                let json = await generateSesJson(pv, datiEtichette.data, "finanziaria", scenario, user)
+                let json = await generateSesJson(pv, datiEtichette, "finanziaria", scenario, user)
 
                 if (json.error) {
                     res.status(400).send(json[0].custom)
@@ -213,7 +225,7 @@ router.post('/datatoses', async (req, res, next) => {
             let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
 
             if (datiEtichette) {
-                let json = await generateSesJson(pv, datiEtichette.data, finanziaria, scenario, user)
+                let json = await generateSesJson(pv, datiEtichette, finanziaria, scenario, user)
                 // console.log(json)
                 if (json.error) {
                     res.status(400).send(json[0].custom)
@@ -293,11 +305,11 @@ router.get('/variazioni', async (req, res, next) => { // se aggiunti ?group=true
     try {
         let pv = req.query.pv ? req.query.pv : req.user.pv.sigla
         let group = req.query.group
-        let variazioni = await getVariazioni(pv, req.user.WSIToken)
+        let variazioni = await getVariazioni(pv)
 
         if (variazioni) {
             if (group === "true") {
-                let varArr = variazioni.data
+                let varArr = variazioni
                 let arrayFam = []
                 for (let i = 0; i < varArr.length; i++) {
                     let famiglia = varArr[i].LSSFAM.trim()
