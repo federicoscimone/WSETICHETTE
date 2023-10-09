@@ -1,4 +1,5 @@
 require("dotenv").config();
+const { ObjectId } = require("mongodb");
 const logger = require("../logger")
 const dbFinanz = "etag"
 const collFinanz = 'finanziarie'
@@ -147,7 +148,27 @@ async function getFinanziarie(client) {
     }
 }
 
+async function setFinanziaria(client, id, finanziara) {
+    try {
+        const finanz = client.db(dbFinanz).collection(collFinanz);
+
+        let query = { _id: ObjectId(id) }
+
+        delete finanziara._id // elimina il campo _id dall'oggetto per evitare errore in quando è un parametro immutabile
+
+        let res = await finanz.updateOne(query, { $set: { ...finanziara } })
+
+        return res
+
+    } catch (err) {
+        console.log(err)
+        return err;
+    }
+}
+
+
 module.exports = {
     getDatiFinanziaria: getDatiFinanziaria,
-    getFinanziarie: getFinanziarie
+    getFinanziarie: getFinanziarie,
+    setFinanziaria: setFinanziaria
 }
