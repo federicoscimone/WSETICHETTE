@@ -148,10 +148,46 @@ async function getFinanziarie(client) {
     }
 }
 
-async function setFinanziaria(client, id, finanziara) {
+
+
+async function switchFinanziaria(client, id, user) {
     try {
         const finanz = client.db(dbFinanz).collection(collFinanz);
+        let query = { _id: ObjectId(id) }
+        let res = await finanz.updateOne(query, [{
+            $set: {
+                abilitato: { $not: "$abilitato" },
+                dataUltimaModifica: new Date(),
+                utenteUltimaModifica: user,
+            }
+        }])
 
+        return res
+
+    } catch (err) {
+        console.log(err)
+        return err;
+    }
+}
+
+async function setFinanziaria(client, id, finanziara, user) {
+    try {
+        const finanz = client.db(dbFinanz).collection(collFinanz);
+        finanziara.utenteUltimaModifica = user
+        finanziara.dataUltimaModifica = new Date()
+        finanziara.importoMinimo = parseInt(finanziara.importoMinimo)
+        finanziara.importoMassimo = parseInt(finanziara.importoMassimo)
+        const dataInizio = new Date(finanziara.dataInizio)
+        dataInizio.setHours(2);
+        dataInizio.setMinutes(0);
+        finanziara.dataInizio = dataInizio
+
+        const dataFine = new Date(finanziara.dataFine)
+        dataFine.setHours(23);
+        dataFine.setMinutes(0);
+        finanziara.dataFine = dataFine
+
+        delete finanziara.dataCreazione
         let query = { _id: ObjectId(id) }
 
         delete finanziara._id // elimina il campo _id dall'oggetto per evitare errore in quando è un parametro immutabile
@@ -167,8 +203,44 @@ async function setFinanziaria(client, id, finanziara) {
 }
 
 
+async function postFinanziaria(client, finanziara, user) {
+    try {
+        const finanz = client.db(dbFinanz).collection(collFinanz);
+        finanziara.utenteCreazione = user
+        finanziara.dataCreazione = new Date()
+        finanziara.importoMinimo = parseInt(finanziara.importoMinimo)
+        finanziara.importoMassimo = parseInt(finanziara.importoMassimo)
+        const dataInizio = new Date(finanziara.dataInizio)
+        dataInizio.setHours(2);
+        dataInizio.setMinutes(0);
+        finanziara.dataInizio = dataInizio
+
+        const dataFine = new Date(finanziara.dataFine)
+        dataFine.setHours(23);
+        dataFine.setMinutes(0);
+        finanziara.dataFine = dataFine
+        delete finanziara.dataUltimaModifica
+        delete finanziara.utenteUltimaModifica
+        delete finanziara._id
+
+        // let query = { _id: ObjectId(id) }
+
+        let res = await finanz.insertOne(finanziara)
+
+        return res
+
+    } catch (err) {
+        console.log(err)
+        return err;
+    }
+}
+
+
+
 module.exports = {
     getDatiFinanziaria: getDatiFinanziaria,
     getFinanziarie: getFinanziarie,
-    setFinanziaria: setFinanziaria
+    setFinanziaria: setFinanziaria,
+    postFinanziaria: postFinanziaria,
+    switchFinanziaria: switchFinanziaria
 }
