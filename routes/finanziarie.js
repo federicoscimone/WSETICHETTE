@@ -4,7 +4,7 @@ let express = require('express');
 let router = express.Router();
 const logger = require('../logger');
 const { MongoClient } = require('mongodb')
-const { getFinanziarie, setFinanziaria, postFinanziaria, switchFinanziaria } = require('../database/finanziariaConnection')
+const { getFinanziarie, setFinanziaria, postFinanziaria, switchFinanziaria, deleteFinanziaria } = require('../database/finanziariaConnection')
 const mongoClient = new MongoClient(mongoDbUrl)
 
 
@@ -12,6 +12,7 @@ router.get('/', async (req, res, next) => {
     try {
         let getResult = await getFinanziarie(mongoClient)
         if (getResult[0]) {
+
             res.status(200).send(getResult)
         } else {
             res.status(400).send({ error: "errore nel recupero delle finanziarie" })
@@ -29,9 +30,9 @@ router.put('/:id', async (req, res, next) => {
         const user = req.user.username
 
         let result = await setFinanziaria(mongoClient, id, finanziaria, user)
-        console.log(result)
         if (result.acknowledged) {
             if (result.modifiedCount) {
+                logger.info(`${user} modifica finanziaria ${id}`)
                 res.status(200).send(result)
             } else {
                 res.status(400).send({ error: "nessuna modifica applicata" })
@@ -52,9 +53,9 @@ router.post('/', async (req, res, next) => {
         const finanziaria = req.body
         const user = req.user.username
         let result = await postFinanziaria(mongoClient, finanziaria, user)
-        console.log(result)
         if (result.acknowledged) {
             if (result.insertedId) {
+                logger.info(`${user} aggiunge finanziaria ${result.insertedId}`)
                 res.status(200).send(result)
             } else {
                 res.status(400).send({ error: "nessuna finanziaria inserita" })
@@ -76,9 +77,9 @@ router.put('/switch/:id', async (req, res, next) => {
         const user = req.user.username
 
         let result = await switchFinanziaria(mongoClient, id, user)
-        console.log(result)
         if (result.acknowledged) {
             if (result.modifiedCount) {
+                logger.info(`${user} cambia stato abilitazione finanziaria ${id}`)
                 res.status(200).send(result)
             } else {
                 res.status(400).send({ error: "nessuno switch applicato" })
@@ -92,5 +93,23 @@ router.put('/switch/:id', async (req, res, next) => {
         logger.error(err)
     }
 })
+
+
+router.delete('/:id', async (req, res, next) => {
+    try {
+        const id = req.params
+        let result = await deleteFinanziaria(mongoClient, id)
+        if (result.acknowledged) {
+            logger.info(`${user} elimina finanziaria ${id}`)
+            res.status(200).send({ msg: `Finanziaria ${id} eliminata` })
+        } else {
+            res.status(400).send({ error: "errore nella cancellazione della finanziaria" })
+        }
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+})
+
 
 module.exports = router;

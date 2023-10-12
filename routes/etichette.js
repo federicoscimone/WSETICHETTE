@@ -37,6 +37,15 @@ cron.schedule('30 6,7,8 * * *', async () => {
 
 });
 
+cron.schedule('40 6,7,8 * * *', async () => {
+
+    if (MODE === 'PROD') {
+        variazioniAutomatiche('MN')
+        logger.info("INVIO VARIAZIONI AUTOMATICHE 2")
+    }
+
+});
+
 const getDatiEtichette = async (pv, codici) => {
     try {
         if (pv === "PR") pv = 'MI'

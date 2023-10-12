@@ -202,6 +202,18 @@ async function setFinanziaria(client, id, finanziara, user) {
     }
 }
 
+async function deleteFinanziaria(client, id) {
+    try {
+        const finanz = client.db(dbFinanz).collection(collFinanz);
+        let query = { _id: ObjectId(id) }
+        let res = await finanz.deleteOne(query)
+        return res
+    } catch (err) {
+        console.log(err)
+        return err;
+    }
+}
+
 
 async function postFinanziaria(client, finanziara, user) {
     try {
@@ -242,5 +254,6 @@ module.exports = {
     getFinanziarie: getFinanziarie,
     setFinanziaria: setFinanziaria,
     postFinanziaria: postFinanziaria,
-    switchFinanziaria: switchFinanziaria
+    switchFinanziaria: switchFinanziaria,
+    deleteFinanziaria: deleteFinanziaria
 }
