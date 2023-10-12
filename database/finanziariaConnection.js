@@ -235,7 +235,7 @@ async function postFinanziaria(client, finanziara, user) {
         delete finanziara.utenteUltimaModifica
         delete finanziara._id
 
-        // let query = { _id: ObjectId(id) }
+        if (!finanziara.regole) finanziara.regole = []
 
         let res = await finanz.insertOne(finanziara)
 

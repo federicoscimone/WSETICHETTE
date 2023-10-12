@@ -84,7 +84,6 @@ router.put('/switch/:id', async (req, res, next) => {
             } else {
                 res.status(400).send({ error: "nessuno switch applicato" })
             }
-
         } else {
             res.status(400).send({ error: "errore nello switch della finanziaria" })
         }
@@ -98,6 +97,7 @@ router.put('/switch/:id', async (req, res, next) => {
 router.delete('/:id', async (req, res, next) => {
     try {
         const id = req.params
+        const user = req.user.username
         let result = await deleteFinanziaria(mongoClient, id)
         if (result.acknowledged) {
             logger.info(`${user} elimina finanziaria ${id}`)
