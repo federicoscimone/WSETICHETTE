@@ -4,7 +4,7 @@ let express = require('express');
 let router = express.Router();
 const logger = require('../logger');
 const { MongoClient } = require('mongodb')
-const { getFinanziarie, setFinanziaria, postFinanziaria, switchFinanziaria, deleteFinanziaria } = require('../database/finanziariaConnection')
+const { getFinanziarie, setFinanziaria, postFinanziaria, switchFinanziaria, deleteFinanziaria, postRegola, deleteRegola } = require('../database/finanziariaConnection')
 const mongoClient = new MongoClient(mongoDbUrl)
 
 
@@ -104,6 +104,46 @@ router.delete('/:id', async (req, res, next) => {
             res.status(200).send({ msg: `Finanziaria ${id} eliminata` })
         } else {
             res.status(400).send({ error: "errore nella cancellazione della finanziaria" })
+        }
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+})
+
+router.put('/:id/regole', async (req, res, next) => {
+    try {
+        const id = req.params
+        const user = req.user.username
+        const regola = req.body
+        console.log(user + " add regola")
+        console.log(id)
+        console.log(regola)
+
+        let result = await postRegola(mongoClient, id, regola, user)
+        if (result.acknowledged) {
+            logger.info(`${user} aggiunge regola a finanziaria ${id}`)
+            res.status(200).send({ msg: `${user} aggiunge regola a finanziaria ${id}` })
+        } else {
+            res.status(400).send({ error: "errore nell'aggiunta della regola" })
+        }
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+})
+
+
+router.delete('/:id/regole', async (req, res, next) => {
+    try {
+        const id = req.params
+        const user = req.user.username
+        let result = await deleteRegola(mongoClient, id, regola)
+        if (result.acknowledged) {
+            logger.info(`${user} elimina regola per finanziara ${id}`)
+            res.status(200).send({ msg: `regola finanziaria ${id} eliminata` })
+        } else {
+            res.status(400).send({ error: "errore nella cancellazione della regola finanziaria" })
         }
     } catch (err) {
         console.log(err)

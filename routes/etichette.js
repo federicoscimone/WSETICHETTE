@@ -41,6 +41,7 @@ cron.schedule('40 6,7,8 * * *', async () => {
 
     if (MODE === 'PROD') {
         variazioniAutomatiche('MN')
+        variazioniAutomatiche('VA')
         logger.info("INVIO VARIAZIONI AUTOMATICHE 2")
     }
 

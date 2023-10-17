@@ -248,6 +248,59 @@ async function postFinanziaria(client, finanziara, user) {
 }
 
 
+async function postRegola(client, id, regola, user) {
+    try {
+        const finanz = client.db(dbFinanz).collection(collFinanz);
+        regola.rangeInizio = parseFloat(regola.rangeInizio)
+        regola.rangeFine = parseFloat(regola.rangeFine)
+        regola.tan = parseInt(regola.tan)
+        regola.taeg = parseInt(regola.taeg)
+        regola.spesaPercentuale = parseInt(regola.spesaPercentuale)
+        regola.spesaEuro = parseFloat(regola.spesaEuro)
+        regola.nRte = parseInt(regola.taeg)
+        let query = { _id: ObjectId(id) }
+
+        let res = await finanz.updateOne(query,
+            {
+                $push: { regole: regola },
+                $set: { utenteUltimaModifica: user, dataUltimaModifica: new Date() }
+            })
+
+        return res
+
+
+    } catch (err) {
+        console.log(err)
+        return err;
+    }
+}
+
+async function deleteRegola(client, id, regola) {
+    try {
+        const finanz = client.db(dbFinanz).collection(collFinanz);
+        let query = { _id: ObjectId(id) }
+        let res = await finanz.updateOne(query,
+            {
+                $pull: {
+                    regole: {
+                        rangeInizio: regola.rangeInizio,
+                        rangeFine: regola.rangeFine,
+                        tan: regola.tan,
+                        taeg: regola.taeg,
+                        nRate: regola.nRate
+
+                    }
+                },
+                $set: { utenteUltimaModifica: user, dataUltimaModifica: new Date() }
+            })
+
+        return res
+    } catch (err) {
+        console.log(err)
+        return err;
+    }
+}
+
 
 module.exports = {
     getDatiFinanziaria: getDatiFinanziaria,
@@ -255,5 +308,7 @@ module.exports = {
     setFinanziaria: setFinanziaria,
     postFinanziaria: postFinanziaria,
     switchFinanziaria: switchFinanziaria,
-    deleteFinanziaria: deleteFinanziaria
+    deleteFinanziaria: deleteFinanziaria,
+    postRegola: postRegola,
+    deleteRegola: deleteRegola
 }
