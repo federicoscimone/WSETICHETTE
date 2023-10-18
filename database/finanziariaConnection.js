@@ -1,8 +1,11 @@
-require("dotenv").config();
-const { ObjectId } = require("mongodb");
+require("dotenv").config()
+const mongoDbUrl = process.env.MONGODBURL
+const { ObjectId, MongoClient } = require("mongodb");
 const logger = require("../logger")
 const dbFinanz = "etag"
 const collFinanz = 'finanziarie'
+
+const mongoClient = new MongoClient(mongoDbUrl)
 
 async function getDatiFinanziaria(prezzo, pv, finanziaria) {
     try {
@@ -128,10 +131,77 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
             finData.tan = finData.tan.toFixed(2)
             finData.taeg = finData.taeg.toFixed(2)
         }
-        console.log(finData)
+        //  console.log(finData)
         return finData
     } catch (err) {
         logger.error("ERRORE: " + err)
+        return err;
+    }
+}
+
+async function getDatiFinanziariaDinamic(importo, pv) {
+    try {
+        let finData = {}
+        let error = ''
+        let finanziarie = await getCurrentFin(mongoClient, pv) // ottieni tutte le finaziarie attive per la data odierna e il pv indicato
+
+        if (finanziarie.length > 0) { // se trovo almeno una finanziaria attiva
+            for (let i = 0; i < finanziarie.length; i++) { // per ogni finanziaria cerco la regola corrispondente e ne restituisco la prima che trovo
+                let finanziaria = finanziarie[i]
+
+                let regola = finanziaria.regole.find(r => {
+                    return importo >= r.rangeInizio && importo <= r.rangeFine
+                })
+
+                console.log(regola)
+                if (regola) {
+                    let spese = 0
+                    let rata = 0
+                    spese = (((importo * regola.spesaPercentuale) / 100) + regola.spesaEuro) * regola.nRate
+                    rata = (spese + importo) / regola.nRate
+
+                    // compongo il dato finanziario da mostrare nel prezzo
+                    finData.nrate = regola.nRate
+                    finData.taeg = regola.taeg
+                    finData.tan = regola.tan
+                    finData.spese = spese
+                    finData.rata = rata
+                    finData.proroga = finanziaria.proroga
+                    finData.nome = finanziaria.nome
+
+                    return finData
+                } else { // se trovo finanziare ma non trovo regole adatte salvo l'errore
+                    error = "Importo non finanziabile"
+                }
+            }
+        } else { // se non trovo finanziare salvo l'errore
+            error = "Nessuna finanziaria attiva oggi per il pv e indicato"
+        }
+
+        // se non sono disponibili la rata e il nome della finanziata passo l'errore salvato sulla variabile error
+        if (!finData.rata && !finData.nome)
+            finData = { error: error }
+        return finData
+    } catch (error) {
+        console.log(error)
+    }
+}
+
+//recupera le finanziare correnti per data
+async function getCurrentFin(client, pv) {
+    try {
+        const finanz = client.db(dbFinanz).collection(collFinanz);
+        const query = {
+            abilitato: true,
+            dataInizio: { $lte: new Date() },
+            dataFine: { $gte: new Date() },
+            puntiVendita: { $in: [pv] }
+        }
+        const result = await finanz.find(query).sort({ _id: -1 }).toArray()
+
+        return result
+    } catch (err) {
+        console.log(err)
         return err;
     }
 }
@@ -275,7 +345,7 @@ async function postRegola(client, id, regola, user) {
     }
 }
 
-async function deleteRegola(client, id, regola) {
+async function deleteRegola(client, id, regola, user) {
     try {
         const finanz = client.db(dbFinanz).collection(collFinanz);
         let query = { _id: ObjectId(id) }
@@ -304,11 +374,13 @@ async function deleteRegola(client, id, regola) {
 
 module.exports = {
     getDatiFinanziaria: getDatiFinanziaria,
+    getDatiFinanziariaDinamic: getDatiFinanziariaDinamic,
     getFinanziarie: getFinanziarie,
     setFinanziaria: setFinanziaria,
     postFinanziaria: postFinanziaria,
     switchFinanziaria: switchFinanziaria,
     deleteFinanziaria: deleteFinanziaria,
     postRegola: postRegola,
-    deleteRegola: deleteRegola
+    deleteRegola: deleteRegola,
+    getCurrentFin: getCurrentFin
 }

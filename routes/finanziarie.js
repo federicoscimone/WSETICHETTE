@@ -4,13 +4,30 @@ let express = require('express');
 let router = express.Router();
 const logger = require('../logger');
 const { MongoClient } = require('mongodb')
-const { getFinanziarie, setFinanziaria, postFinanziaria, switchFinanziaria, deleteFinanziaria, postRegola, deleteRegola } = require('../database/finanziariaConnection')
+const { getFinanziarie, setFinanziaria, postFinanziaria, switchFinanziaria, deleteFinanziaria, postRegola, deleteRegola, getCurrentFin } = require('../database/finanziariaConnection')
 const mongoClient = new MongoClient(mongoDbUrl)
 
 
 router.get('/', async (req, res, next) => {
     try {
         let getResult = await getFinanziarie(mongoClient)
+        if (getResult[0]) {
+
+            res.status(200).send(getResult)
+        } else {
+            res.status(400).send({ error: "errore nel recupero delle finanziarie" })
+        }
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+})
+
+
+router.get('/current', async (req, res, next) => {
+    try {
+        let pv = req.query.pv
+        let getResult = await getCurrentFin(mongoClient, pv)
         if (getResult[0]) {
 
             res.status(200).send(getResult)
@@ -116,10 +133,6 @@ router.put('/:id/regole', async (req, res, next) => {
         const id = req.params
         const user = req.user.username
         const regola = req.body
-        console.log(user + " add regola")
-        console.log(id)
-        console.log(regola)
-
         let result = await postRegola(mongoClient, id, regola, user)
         if (result.acknowledged) {
             logger.info(`${user} aggiunge regola a finanziaria ${id}`)
@@ -138,7 +151,8 @@ router.delete('/:id/regole', async (req, res, next) => {
     try {
         const id = req.params
         const user = req.user.username
-        let result = await deleteRegola(mongoClient, id, regola)
+        const regola = req.body
+        let result = await deleteRegola(mongoClient, id, regola, user)
         if (result.acknowledged) {
             logger.info(`${user} elimina regola per finanziara ${id}`)
             res.status(200).send({ msg: `regola finanziaria ${id} eliminata` })
