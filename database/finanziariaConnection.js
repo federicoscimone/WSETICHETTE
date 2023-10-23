@@ -23,10 +23,14 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
         }
 
 
-        if (now > new Date('2023-09-14')) finanziaria = 'Tan 0 Taeg Variabile'
         if (now > new Date('2023-09-26')) finanziaria = 'Tan 0 Taeg 0'
+        if (now > new Date('2023-10-12')) {
+            if ((pv === 'MN') || (pv === 'LC') || (pv === 'TV')) finanziaria = 'Tan 0 Taeg 0'
+            else finanziaria = 'Tan 0 Taeg Variabile'
+        }
 
-        if (pv === 'PR') finanziaria = 'Tan 0 Taeg 0'
+
+        if (pv === 'PR') finanziaria = 'Tan 0 Taeg Variabile'
 
         //  console.log(finanziaria)
 
@@ -51,7 +55,7 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
             //finanziaria tan 0
             if (finanziaria === 'Tan 0 Taeg Variabile') {
                 finData.tan = 0
-                finData.proroga = "Gennaio 2024"
+                finData.proroga = "FEBBRAIO 2024"
 
                 if (prezzo > 298.99 && prezzo <= 1499.99) {
                     finData.nrate = 20
@@ -76,7 +80,7 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
                 if (finanziaria === 'Rata chiara') {
                     finData.proroga = "dopo 3 mesi"
                     if (prezzo < 999.99) {
-                        finData.nrate = 22
+                        finData.nrate = 222499
                         finData.taeg = 11.12
                         finData.tan = 10.60
                         finData.spese = prezzo * 0.0011
@@ -131,7 +135,7 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
             finData.tan = finData.tan.toFixed(2)
             finData.taeg = finData.taeg.toFixed(2)
         }
-        //  console.log(finData)
+        console.log(finData)
         return finData
     } catch (err) {
         logger.error("ERRORE: " + err)
