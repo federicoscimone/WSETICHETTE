@@ -25,7 +25,7 @@ router.get('/', async (req, res, next) => {
 
 
 router.get('/current', async (req, res, next) => {
-    try {
+    try {       
         let pv = req.query.pv
         let getResult = await getCurrentFin(mongoClient, pv)
         if (getResult[0]) {

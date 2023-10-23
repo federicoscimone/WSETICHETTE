@@ -113,7 +113,6 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                 if (!datiEtichette[i].error) {
                     //datiEtichette[i].datiFin = await getDatiFinanziaria(datiEtichette[i].PREZZO, pv, finanziaria)
                     datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i].PREZZO, pv)
-                    console.log(datiEtichette[i].datiFin)
                 }
             }
         }
@@ -160,6 +159,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                             toSES.custom.tan = datiEtichette[y].datiFin.tan.toString()
                             toSES.custom.taeg = datiEtichette[y].datiFin.taeg.toString()
                             toSES.custom.proroga = datiEtichette[y].datiFin.proroga.toString()
+                            toSES.custom.finanziaria = datiEtichette[y].datiFin.nome.toString()
                         }
                     }
 

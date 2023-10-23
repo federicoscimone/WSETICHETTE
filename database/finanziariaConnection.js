@@ -153,7 +153,6 @@ async function getDatiFinanziariaDinamic(importo, pv) {
                     return importo >= r.rangeInizio && importo <= r.rangeFine
                 })
 
-                console.log(regola)
                 if (regola) {
                     let spese = 0
                     let rata = 0
@@ -323,11 +322,11 @@ async function postRegola(client, id, regola, user) {
         const finanz = client.db(dbFinanz).collection(collFinanz);
         regola.rangeInizio = parseFloat(regola.rangeInizio)
         regola.rangeFine = parseFloat(regola.rangeFine)
-        regola.tan = parseInt(regola.tan)
-        regola.taeg = parseInt(regola.taeg)
-        regola.spesaPercentuale = parseInt(regola.spesaPercentuale)
+        regola.tan = parseFloat(regola.tan)
+        regola.taeg = parseFloat(regola.taeg)
+        regola.spesaPercentuale = parseFloat(regola.spesaPercentuale)
         regola.spesaEuro = parseFloat(regola.spesaEuro)
-        regola.nRte = parseInt(regola.taeg)
+        regola.nRate = parseInt(regola.nRate)
         let query = { _id: ObjectId(id) }
 
         let res = await finanz.updateOne(query,

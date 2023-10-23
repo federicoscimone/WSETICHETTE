@@ -226,6 +226,7 @@ router.post('/datatoses', async (req, res, next) => {
         let user = req.user.username
         let arrayToSes = []
         let arrayErrors = []
+        let test = req.query.test
 
         let codici = req.body.codici
         if (codici.length > 0) {
@@ -242,19 +243,24 @@ router.post('/datatoses', async (req, res, next) => {
                 } else {
                     arrayToSes = json.json
                     arrayErrors = json.errors
-                    let resToses = await postItems(pv, arrayToSes)
-                    //console.log(resToses)
+                    let resToses = null
+                    if (!test) { // se viene NON passato test nella query del percorso
+                        resToses = await postItems(pv, arrayToSes)
 
-
-                    if (resToses.data) {
-                        let correlationId = resToses.data.correlationId
-                        logger.info("DataToSes " + user + " pv " + pv + " correlationID " + correlationId)
-                        let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria, type: "update" }
-                        addEvent(mongoClient, returnData)
+                        if (resToses.data) {
+                            let correlationId = resToses.data.correlationId
+                            logger.info("DataToSes " + user + " pv " + pv + " correlationID " + correlationId)
+                            let returnData = { inviati: arrayToSes.length, errori: arrayErrors.length, correlationId: correlationId, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria, type: "update" }
+                            addEvent(mongoClient, returnData)
+                            res.status(200).send(returnData)
+                        } else {
+                            res.status(400).send({ error: "errore nella comunicazione con SES" })
+                        }
+                    } else { // è un test, quindi restituisci i dati composti per ses ma senza inviarli a loro
+                        let returnData = { arrayToSes: arrayToSes, inviati: arrayToSes.length, errori: arrayErrors.length, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria, type: "update" }
                         res.status(200).send(returnData)
-                    } else {
-                        res.status(400).send({ error: "errore nella comunicazione con SES" })
                     }
+
                 }
             }
             else {
