@@ -90,7 +90,8 @@ async function getDatiArticolo(codice, pv) {
             //verifica se è stato passato un codice o un barcode
             const queryVerificaCodice = `select * from newstore.anart where ancodi = '${codice}'`
             const resultVerificaCodice = await AS.query(queryVerificaCodice).catch(err => { return { error: `articolo non trovato `, codice: originalCode } })
-            if (resultVerificaCodice.count > 0) {
+            console.log(resultVerificaCodice)
+            if (resultVerificaCodice[0]) {
                 tipo = 'ancodi'
             }
             else {
@@ -98,6 +99,7 @@ async function getDatiArticolo(codice, pv) {
                 if (/\d+/.test(codice)) {
                     const queryVerificaBarcode = `select * from newstore.anart where anbaco = '${codice}'`
                     let resultVerificaBarcode = await AS.query(queryVerificaBarcode).catch(err => { console.log(err); return { error: `articolo non trovato `, codice: originalCode } })
+                    console.log(resultVerificaBarcode)
                     if (resultVerificaBarcode[0]) {
                         tipo = 'anbaco'
 

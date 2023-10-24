@@ -25,14 +25,15 @@ router.get('/', async (req, res, next) => {
 
 
 router.get('/current', async (req, res, next) => {
-    try {       
+    try {
         let pv = req.query.pv
         let getResult = await getCurrentFin(mongoClient, pv)
+
         if (getResult[0]) {
 
             res.status(200).send(getResult)
         } else {
-            res.status(400).send({ error: "errore nel recupero delle finanziarie" })
+            res.status(400).send({ error: "Nessuna finanziaria attiva trovata" })
         }
     } catch (err) {
         console.log(err)

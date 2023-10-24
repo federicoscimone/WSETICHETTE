@@ -165,10 +165,10 @@ async function getDatiFinanziariaDinamic(importo, pv) {
 
                     // compongo il dato finanziario da mostrare nel prezzo
                     finData.nrate = regola.nRate
-                    finData.taeg = regola.taeg
-                    finData.tan = regola.tan
-                    finData.spese = spese
-                    finData.rata = rata
+                    finData.taeg = regola.taeg.toFixed(2)
+                    finData.tan = regola.tan.toFixed(2)
+                    finData.spese = spese.toFixed(2)
+                    finData.rata = rata.toFixed(2)
                     finData.proroga = finanziaria.proroga
                     finData.nome = finanziaria.nome
 
@@ -184,6 +184,7 @@ async function getDatiFinanziariaDinamic(importo, pv) {
         // se non sono disponibili la rata e il nome della finanziata passo l'errore salvato sulla variabile error
         if (!finData.rata && !finData.nome)
             finData = { error: error }
+        console.log(finData)
         return finData
     } catch (error) {
         console.log(error)

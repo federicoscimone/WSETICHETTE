@@ -152,7 +152,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
 
                     if (finanziaria) {
                         if (datiEtichette[y].datiFin.error) {
-                            //  arrayErrors.push({ error: datiEtichette[y].datiFin.error, codice: datiEtichette[y].CODICE })
+                            // arrayErrors.push({ error: datiEtichette[y].datiFin.error, codice: datiEtichette[y].CODICE })
                         } else {
                             toSES.custom.rata = datiEtichette[y].datiFin.rata.toString()
                             toSES.custom.nrate = datiEtichette[y].datiFin.nrate.toString()
@@ -186,6 +186,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                         //se lo scenario è Finanziaria ma l'importo non è finanziabile
                         if (scenario === 'TASSO0' && datiEtichette[y].datiFin.error) {
                             scenarioToses = 'default'
+                            arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Importo non finanziabile, applicato scenario default` })
                         }
 
                         // se lo scenario è Finanziaria Prezzo Tagliato
@@ -258,6 +259,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                         //se lo scenario è Finanziaria ma l'importo non è finanziabile
                         if (scenario === 'T0VERT' && datiEtichette[y].datiFin.error) {
                             scenarioToses = 'CUTVERT'
+                            arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Importo non finanziabile, applicato scenario default verticale` })
                         }
 
                         // se lo scenario è Finanziaria Prezzo Tagliato
