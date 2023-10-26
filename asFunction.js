@@ -52,19 +52,10 @@ async function getVariazioniFunc(data, pv) {
         let giorno = new Date(data)
 
         const AS = await odbc.connect(connectionConfig)
-        const query = `SELECT  ANCODI,LSSFAM,PAPVEN,PADATA,PAORA,PAFLAT,PAPPAT,PAFLAV,PAPPAV,LSDESC,concat(T2.LSLINE,T2.LSSETT) AS KEY,ANGRUP,ANSTGR
-        FROM newstore.lprat,
-        (Select ANCODI,ANGRUP,ANSTGR from bremag.artic) AS T0,
-        (Select LSSFAM,LSSETT,LSLINE from board.lisea1) as T1,
-        (Select LSLINE,LSSETT,LSDESC from board.lisea1 where LSFAMI = '' and LSSETT != '' ) as T2
-           where
-           (T0.ANCODI = PACODI)
-           and
-       ((concat(T0.ANGRUP,T0.ANSTGR) = T1.LSSFAM) and (concat(T1.LSLINE,T1.LSSETT) = concat(T2.LSLINE,T2.LSSETT)))
-           and
-           (PAPVEN='${pv}'and PADATA='${formatDataToAS(giorno)}')
-           Order by PADATA DESC,PAORA DESC,LSDESC,concat(T2.LSLINE,T2.LSSETT),ANGRUP,ANSTGR`
+        const query = `SELECT  ANCODI,LSSFAM,PAPVEN,PADATA,PAORA,PAFLAT,PAPPAT,PAFLAV,PAPPAV,LSDESC,concat(T2.LSLINE,T2.LSSETT) AS KEY,ANGRUP,ANSTGR FROM newstore.lprat,(Select ANCODI,ANGRUP,ANSTGR from bremag.artic) AS T0,(Select LSSFAM,LSSETT,LSLINE from board.lisea1) as T1, (Select LSLINE,LSSETT,LSDESC from board.lisea1 where LSFAMI = '' and LSSETT != '' ) as T2 where (T0.ANCODI = PACODI) and ((concat(T0.ANGRUP,T0.ANSTGR) = T1.LSSFAM) and (concat(T1.LSLINE,T1.LSSETT) = concat(T2.LSLINE,T2.LSSETT))) and (PAPVEN='${pv}'and PADATA='${formatDataToAS(giorno)}') Order by PADATA DESC,PAORA DESC,LSDESC,concat(T2.LSLINE,T2.LSSETT),ANGRUP,ANSTGR`
         const result = await AS.query(query)
+        // console.log(query)
+        //console.log(result)
         AS.close()
         if (result) {
             return (result);
@@ -81,16 +72,15 @@ async function getVariazioniFunc(data, pv) {
 
 async function getDatiArticolo(codice, pv) {
     try {
-
-
         let originalCode = codice
         if (codice.length < 14) {
             const AS = await odbc.connect(connectionConfig)
             let tipo = ''
+            //console.log(codice + " " + pv)
             //verifica se è stato passato un codice o un barcode
             const queryVerificaCodice = `select * from newstore.anart where ancodi = '${codice}'`
             const resultVerificaCodice = await AS.query(queryVerificaCodice).catch(err => { return { error: `articolo non trovato `, codice: originalCode } })
-            console.log(resultVerificaCodice)
+            //  console.log(resultVerificaCodice)
             if (resultVerificaCodice[0]) {
                 tipo = 'ancodi'
             }
@@ -99,7 +89,7 @@ async function getDatiArticolo(codice, pv) {
                 if (/\d+/.test(codice)) {
                     const queryVerificaBarcode = `select * from newstore.anart where anbaco = '${codice}'`
                     let resultVerificaBarcode = await AS.query(queryVerificaBarcode).catch(err => { console.log(err); return { error: `articolo non trovato `, codice: originalCode } })
-                    console.log(resultVerificaBarcode)
+                    // console.log(resultVerificaBarcode)
                     if (resultVerificaBarcode[0]) {
                         tipo = 'anbaco'
 
@@ -130,7 +120,7 @@ async function getDatiArticolo(codice, pv) {
                 result[0].IMGLINK = linkImg
                 result[0].ECATLINK = linkEcat
                 result[0].CARATTERISTICHE = mergeCARFields(result[0])
-                // console.log(result[0])
+               // console.log(result[0])
                 return (result[0]);
             }
             else {

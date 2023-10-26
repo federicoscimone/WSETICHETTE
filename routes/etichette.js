@@ -51,6 +51,7 @@ const getDatiEtichette = async (pv, codici) => {
     try {
         if (pv === "PR") pv = 'MI'
         let result = []
+        //console.log(codici)
         if (codici) {
             let datoProvv = {}
             for (let i = 0; i < codici.length; i++) {
@@ -78,6 +79,7 @@ const getCodiciVariazioni = async (pv) => {
         let data = formatDataToAS(new Date())
         if (pv === 'PR') pv = 'MI'
         let result = await getVariazioniFunc(data, pv)
+        //console.log(result)
         if (result.error)
             return false
         else
@@ -110,15 +112,16 @@ const variazioniAutomatiche = async (pv) => {
 
         //let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
         let codici = await getCodiciVariazioni(pv)
+        //console.log(codici)
         if (codici) {
             if (codici.length > 0) {
                 let finanziaria = "autovariazione"//req.body.finanziaria
                 let scenario = null//req.body.scenario
                 let datiEtichette = await getDatiEtichette(pv, codici)
-                console.log(datiEtichette)
+
 
                 if (datiEtichette) {
-                    let json = await generateSesJson(pv, datiEtichette.data, finanziaria, scenario, 'system.user')
+                    let json = await generateSesJson(pv, datiEtichette, finanziaria, scenario, 'system.user')
 
                     if (json.error) {
                         logger.error("errore nella generazione del json per ses " + json.error)
@@ -363,6 +366,7 @@ router.get('/autovariazione', async (req, res, next) => {
     try {
         let pv = req.query.pv
         let variazioni = await variazioniAutomatiche(pv)
+        // console.log(variazioni)
         if (variazioni.inviati) {
             res.status(200).send(variazioni)
         }

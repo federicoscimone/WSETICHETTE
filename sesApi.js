@@ -116,7 +116,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                 }
             }
         }
-        console.log(datiEtichette)
+       // console.log(datiEtichette)
         let arrayErrors = []
         let arrayToSes = []
         for (let y = 0; y < datiEtichette.length; y++) {
@@ -365,7 +365,6 @@ const generateSesScenarioJson = async (client, pv, codici, scenario, orientament
 
         /*  if (datiEtichette[y].error) {
               arrayErrors.push(datiEtichette[y].error)
-  
           }
           else {
               //composizione json per vcloud secondo la semantica stabilita su studio
@@ -385,10 +384,10 @@ const generateSesScenarioJson = async (client, pv, codici, scenario, orientament
                       caratteristiche: datiEtichette[y].CARATTERISTICHE.toString(),
                       stelle: Math.floor(datiEtichette[y].PREZZO).toString(),
                   }
-  
               }
               arrayToSes.push(toSES)
           }*/
+
     }
     return { json: arrayToSes, errors: arrayErrors }
 

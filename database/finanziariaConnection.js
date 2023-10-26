@@ -135,7 +135,6 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
             finData.tan = finData.tan.toFixed(2)
             finData.taeg = finData.taeg.toFixed(2)
         }
-        console.log(finData)
         return finData
     } catch (err) {
         logger.error("ERRORE: " + err)
@@ -184,7 +183,6 @@ async function getDatiFinanziariaDinamic(importo, pv) {
         // se non sono disponibili la rata e il nome della finanziata passo l'errore salvato sulla variabile error
         if (!finData.rata && !finData.nome)
             finData = { error: error }
-        console.log(finData)
         return finData
     } catch (error) {
         console.log(error)
