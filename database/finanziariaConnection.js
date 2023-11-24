@@ -142,16 +142,24 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
     }
 }
 
-async function getDatiFinanziariaDinamic(importo, pv) {
+async function getDatiFinanziariaDinamic(importo, pv, selectedFin) {
     try {
         let finData = {}
         let error = ''
-        let finanziarie = await getCurrentFin(mongoClient, pv) // ottieni tutte le finaziarie attive per la data odierna e il pv indicato
+        let finanziarie = await getCurrentFin(mongoClient, pv)
 
+        // se viene scelta manualmente la finanziaria allora la cerca tra quelle attiva e la assegna all'array come unica possibilità
+        if (selectedFin && selectedFin !== "auto") {
+            let findFin = finanziarie.find(fin => fin.nome === selectedFin)
+            finanziarie = []
+            finanziarie[0] = findFin
+        }
+
+        //  console.log(selectedFin)
+        //console.log(finanziarie)
         if (finanziarie.length > 0) { // se trovo almeno una finanziaria attiva
             for (let i = 0; i < finanziarie.length; i++) { // per ogni finanziaria cerco la regola corrispondente e ne restituisco la prima che trovo
                 let finanziaria = finanziarie[i]
-
                 let regola = finanziaria.regole.find(r => {
                     return importo >= r.rangeInizio && importo <= r.rangeFine
                 })
@@ -199,7 +207,7 @@ async function getCurrentFin(client, pv) {
             dataFine: { $gte: new Date() },
             puntiVendita: { $in: [pv] }
         }
-        const result = await finanz.find(query).sort({ _id: -1 }).toArray()
+        const result = await finanz.find(query).sort({ priority: 1 }).toArray()
 
         return result
     } catch (err) {
@@ -212,7 +220,7 @@ async function getCurrentFin(client, pv) {
 async function getFinanziarie(client) {
     try {
         const finanz = client.db(dbFinanz).collection(collFinanz);
-        const result = await finanz.find().sort({ dataUltimaModifica: -1 }).toArray()
+        const result = await finanz.find().sort({ priority: 1 }).toArray()
         return result
     } catch (err) {
         console.log(err)

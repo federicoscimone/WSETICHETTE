@@ -1,0 +1,189 @@
+<html>
+
+<head>
+    <style>
+        @page {
+            size: A4;
+        }
+
+        /* Impostazioni body */
+        body {
+            font-family: Impact;
+            font-size: 35px;
+            text-align: left;
+            width: 208mm;
+            height: 294mm;
+        }
+
+        .background {
+            padding: 0mm;
+            margin: 0mm;
+            margin-left: -1mm;
+            width: 208mm;
+            height: 294mm;
+        }
+
+
+        .marca {
+            position: absolute;
+            top: 85mm;
+            left: 15mm;
+            font-size: 15mm;
+            font-weight: bolder;
+            color: #080000;
+        }
+
+        hr {
+            position: absolute;
+            color: #080000;
+            top: 101mm;
+            left: 12mm;
+            width: 190mm;
+        }
+
+
+        .codice {
+            text-align: left;
+            top: 105mm;
+            left: 15mm;
+            width: 170mm;
+            font-size: 10mm;
+            position: absolute;
+            color: #666666;
+        }
+
+        .caratteristiche {
+            width: 170mm;
+            top: 120mm;
+            left: 15mm;
+            font-size: 5.5mm;
+            position: absolute;
+            text-align: justify;
+            font-weight: normal;
+            color: #6C6C6C;
+        }
+
+        /*PREZZO CONSIGLIATO*/
+        .prezzoconsigliato {
+            position: absolute;
+            width: 100mm;
+            top: 185mm;
+            left: 110mm;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+
+            color: #1558A3;
+            font-weight: bold;
+        }
+
+        .prezzocons {
+            font-size: 20mm;
+            margin-right: 2mm;
+        }
+
+        .suggerimento {
+            font-size: 5mm;
+        }
+
+        /*PREZZO*/
+        .prezzo {
+            position: absolute;
+            width: 208mm;
+            top: 210mm;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+
+            color: #ED7117;
+            font-weight: bold;
+        }
+
+        .prezzoeuro {
+            text-align: left;
+            font-size: 40mm;
+        }
+
+        .prezzoint {
+            position: relative;
+            margin-right: 1mm;
+            text-align: right;
+            font-size: 55mm;
+        }
+
+        .prezzodec {
+            position: relative;
+            text-align: left;
+            font-size: 15mm;
+            top: -12mm;
+
+        }
+
+        .immagine {
+            top: 150mm;
+            left: 20mm;
+            font-size: 6.5mm;
+            text-align: right;
+            position: absolute;
+        }
+
+        .stelleimg {
+            width: 20mm;
+        }
+
+        .stelle {
+            position: absolute;
+            top: 270mm;
+            left: 70mm;
+            font-size: 5.5mm;
+            color: #035D98;
+            font-family: impact;
+            font-weight: bolder;
+        }
+
+        .qrcode {
+            position: absolute;
+            top: 270mm;
+            left: 10mm;
+            background: #FFFFFF;
+            width: 23mm;
+            text-align: left;
+            position: absolute;
+        }
+
+        .barcodeimg {
+            position: absolute;
+            top: 278mm;
+            right: 15mm;
+            width: 30mm;
+            text-align: left;
+        }
+    </style>
+
+</head>
+
+<body>
+    <img class="background" src="{{BACKGROUNDURL}}" />
+    <div class="marca">{{MARCA}}</div>
+    <hr>
+    <div class="codice">{{CODICE}}</div>
+    <div class="caratteristiche"> {{CARATTERISTICHE}}</div>
+    <div class="prezzoconsigliato">
+        <div class="suggerimento">Prezzo suggerito dal fornitore</div>
+        <div class="prezzocons">€{{PREZZOCONSIGLIATO}}</div>
+    </div>
+    <div class="prezzo">
+        <div class="prezzoint"><span class="prezzoeuro">€</span>{{PREZZOINT}}</div>
+        <div class="prezzodec">,{{PREZZODEC}}</div>
+    </div>
+    <img class="qrcode" src={{QRCODE}} />
+    <div class="stelle"> <img class="stelleimg" src={{STARIMG}}>Ottieni {{STELLE}} Stelle!</div>
+    <img class="barcodeimg" src={{BARCODEIMG}}>
+
+</body>
+
+</html>

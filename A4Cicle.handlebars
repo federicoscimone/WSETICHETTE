@@ -1,0 +1,87 @@
+{{#each articoli}}
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <title>Template A4 con CSS</title>
+    <style>
+        /* Impostazioni pagina */
+        @page {
+            size: A4;
+            margin: 0;
+        }
+
+        /* Impostazioni body */
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            font-size: 12pt;
+            line-height: 1.5;
+            text-align: center;
+        }
+
+        /* Impostazioni intestazione */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            text-align: left;
+        }
+
+        /* Impostazioni contenuto */
+        main {
+            position: absolute;
+            top: 80px;
+            left: 0;
+            right: 0;
+            bottom: 60px;
+            padding: 20px;
+        }
+
+        /* Impostazioni piè di pagina */
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 60px;
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            text-align: right;
+        }
+
+        /* Impostazioni numero pagina */
+        .page-number:after {
+            content: counter(page);
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>{{CODICE}}</h1>
+    </header>
+
+    <main>
+        <p> {{DESCRIZIONE}}</p>
+    </main>
+
+    <footer>
+        <p class="page-number">Pagina </p>
+    </footer>
+</body>
+
+</html>
+
+<!-- parte da non modificare -->
+{{#if @last}}
+{{else}}
+<div style="page-break-after: always;"></div>
+{{/if}}
+{{/each}}

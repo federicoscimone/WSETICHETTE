@@ -42,6 +42,7 @@ const morganMiddleware = morgan(
 const etichette = require('./routes/etichette')
 const utenti = require('./routes/utenti')
 const finanziarie = require('./routes/finanziarie')
+const bandierineRouter = require('./routes/bandierine')
 app.use(morgan('dev'));
 app.use(morganMiddleware);
 
@@ -148,6 +149,7 @@ app.get('/checkUser', authenticateJWT, function (req, res, next) {
 app.use('/etichette', authenticateJWT, etichette)
 app.use('/utenti', authenticateJWT, utenti)
 app.use('/finanziarie', authenticateJWT, finanziarie)
+app.use('/bandierine', authenticateJWT, bandierineRouter)
 
 app.use((req, res, next) => {
     res.status(404).json({ "error": '404 percorso non trovato' });

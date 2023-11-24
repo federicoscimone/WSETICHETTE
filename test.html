@@ -1,0 +1,267 @@
+<html>
+
+<head>
+    <style>
+        @page {
+            size: A4;
+        }
+
+        /* Impostazioni body */
+        body {
+            font-family: Impact, Haettenschweiler, 'Arial Narrow Bold', sans-serif;
+            text-align: left;
+            width: 208mm;
+            height: 294mm;
+
+        }
+
+        .background {
+            padding: 0mm;
+            margin: 0mm;
+            margin-left: -1mm;
+            width: 208mm;
+            height: 294mm;
+        }
+
+
+        .marca {
+            position: absolute;
+            top: 85mm;
+            left: 15mm;
+            font-size: 15mm;
+            font-weight: bolder;
+            color: #080000;
+        }
+
+        hr {
+            position: absolute;
+            color: #080000;
+            top: 101mm;
+            left: 12mm;
+            width: 190mm;
+        }
+
+
+        .codice {
+            text-align: left;
+            top: 105mm;
+            left: 15mm;
+            width: 170mm;
+            font-size: 10mm;
+            position: absolute;
+            color: #666666;
+        }
+
+        .caratteristiche {
+            width: 170mm;
+            top: 120mm;
+            left: 15mm;
+            font-size: 5.5mm;
+            position: absolute;
+            text-align: justify;
+            font-weight: normal;
+            color: #6C6C6C;
+        }
+
+
+
+        /*PREZZO CONSIGLIATO*/
+        .prezzoconsigliato {
+            position: absolute;
+            width: 100mm;
+            top: 190mm;
+            left: 10mm;
+            color: #1558A3;
+            text-align: left;
+
+        }
+
+        .prezzocons {
+            font-size: 16mm;
+        }
+
+        .suggerimento {
+            font-size: 5mm;
+            margin-bottom: -3mm;
+        }
+
+        /*PREZZO*/
+        .prezzo {
+            position: absolute;
+            width: 80mm;
+            top: 216mm;
+            color: #ED7117;
+            font-weight: bold;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .prezzoeuro {
+            text-align: left;
+            font-size: 20mm;
+        }
+
+        .prezzoint {
+            position: relative;
+            margin-right: 1mm;
+            text-align: right;
+            font-size: 30mm;
+
+        }
+
+        .prezzodec {
+            position: relative;
+            text-align: left;
+
+            font-size: 10mm;
+            top: -8mm;
+        }
+
+        /*RATA*/
+        .rata {
+            position: absolute;
+            width: 110mm;
+            top: 203mm;
+            left: 86mm;
+            color: #ED7117;
+            font-weight: bold;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .rataeuro {
+            text-align: left;
+            font-size: 20mm;
+        }
+
+        .rataint {
+            position: relative;
+            margin-right: 1mm;
+            text-align: right;
+            font-size: 45mm;
+        }
+
+        .ratadec {
+            position: relative;
+            text-align: left;
+            font-size: 18mm;
+            top: -10mm;
+        }
+
+        .nrate {
+            text-align: left;
+            top: 181mm;
+            left: 105mm;
+            width: 170mm;
+            font-size: 18mm;
+            font-weight: normal;
+            position: absolute;
+            color: #FFFFFF;
+        }
+
+        .immagine {
+            top: 150mm;
+            left: 20mm;
+            font-size: 6.5mm;
+            text-align: right;
+            position: absolute;
+        }
+
+        .stelleimg {
+            width: 20mm;
+        }
+
+        .stelle {
+            position: absolute;
+            top: 155mm;
+            left: 94mm;
+            font-size: 6mm;
+            color: #035D98;
+            font-weight: normal;
+        }
+
+        .qrcode {
+            position: absolute;
+            top: 75mm;
+            left: 169mm;
+            background: #FFFFFF;
+            width: 23mm;
+            text-align: left;
+            position: absolute;
+        }
+
+        .scopri {
+            position: absolute;
+            top: 72mm;
+            left: 170mm;
+            font-size: 4mm;
+            color: black;
+        }
+
+        .barcodeimg {
+            position: absolute;
+            top: 105mm;
+            left: 165mm;
+            width: 30mm;
+            text-align: left;
+        }
+
+        .tassi {
+            position: absolute;
+            top: 273mm;
+            width: 208mm;
+            margin: 0;
+            font-size: 16mm;
+            text-align: center;
+            color: #FFFFFF;
+        }
+
+        .proroga {
+            width: 208mm;
+            position: absolute;
+            text-align: center;
+            top: 255mm;
+            font-size: 16mm;
+            text-align: center;
+            color: #FFFFFF;
+        }
+    </style>
+
+</head>
+
+<body>
+    <img class="background" src="{{BACKGROUNDURL}}" />
+    <div class="marca">{{MARCA}}</div>
+    <hr>
+    <div class="codice">{{CODICE}}</div>
+    <div class="caratteristiche"> {{CARATTERISTICHE}}</div>
+    <div class="prezzoconsigliato">
+        <div class="suggerimento">Prezzo suggerito dal fornitore</div>
+        <div class="prezzocons">€{{PREZZOCONSIGLIATO}}</div>
+    </div>
+    <div class="prezzo">
+        <div class="prezzoint"><span class="prezzoeuro">€</span>{{PREZZOINT}}</div>
+        <div class="prezzodec">,{{PREZZODEC}}</div>
+    </div>
+    <div class="nrate">{{datiFin.nrate}} RATE DA </div>
+    <div class="rata">
+        <div class="rataint"></span>{{datiFin.rataInt}}</div>
+        <div class="ratadec">
+            ,{{datiFin.rataDec}}
+        </div>
+    </div>
+    <img class="qrcode" src={{QRCODE}} />
+    <div class="scopri">Scopri di più!</div>
+    <div class="stelle"> <img class="stelleimg" src={{STARIMG}}>Questo prodotto vale {{STELLE}} Stelle!</div>
+    <img class="barcodeimg" src={{BARCODEIMG}}>
+    <div class="proroga">PRIMA RATA A {{datiFin.proroga}}</div>
+    <div class="tassi">TAN {{datiFin.tan}}% TAEG {{datiFin.taeg}}%</div>
+</body>
+
+</html>

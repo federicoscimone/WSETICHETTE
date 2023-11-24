@@ -1,26 +1,16 @@
 require("dotenv").config();
 const mongoDbUrl = process.env.MONGODBURL
-const MINIMOFIN = process.env.MINIMOFIN
-const serviceWSIUser = process.env.SERVICEUSER
-const serviceWSIPass = process.env.SERVICEPASS
 const MODE = process.env.MODE
-
-const WSIURL = process.env.WSIURL
-const fs = require("fs").promises;
 let express = require('express');
 let router = express.Router();
 const logger = require('../logger');
-const odbc = require("odbc");
 const { MongoClient } = require('mongodb')
-const axios = require('axios')
 const cron = require('node-cron');
-const { getDatiArticolo, getVariazioniFunc } = require('../asFunction')
+const { getVariazioni, getCodiciVariazioni, getDatiEtichette } = require('../asFunction')
 const { getScenariosName } = require('../database/etagConnection')
 const { addEvent } = require('../database/utentiConnection')
 const { getLabelsFromItem, postItems, generateSesJson, matchItems } = require('../sesApi')
-const { generaTokenWSI } = require('../routingUtility')
 const mongoClient = new MongoClient(mongoDbUrl)
-const connectString = "DSN=AS400;UserID=ACCLINUX;Password=ACCLINOX"
 
 //SCHEDULING per le variazioni automatiche, impostato per ogni giorno 06:30, 07:30, 08:30
 // aggiungere i punti vendita che passano alla nuova app o creare loop che invia lo stesso comando per tutte le sedi
@@ -42,70 +32,12 @@ cron.schedule('40 6,7,8 * * *', async () => {
     if (MODE === 'PROD') {
         variazioniAutomatiche('MN')
         variazioniAutomatiche('VA')
+        variazioniAutomatiche('MM')
         logger.info("INVIO VARIAZIONI AUTOMATICHE 2")
     }
 
 });
 
-const getDatiEtichette = async (pv, codici) => {
-    try {
-        if (pv === "PR") pv = 'MI'
-        let result = []
-        //console.log(codici)
-        if (codici) {
-            let datoProvv = {}
-            for (let i = 0; i < codici.length; i++) {
-                datoProvv = await getDatiArticolo(codici[i], pv)
-                result.push(datoProvv)
-            }
-            if (result[0]) {
-                return result
-            }
-            else {
-                return false
-            }
-        } else {
-            return ("Mancano dati necessari");
-        }
-    } catch (err) {
-        console.log(err)
-        logger.error(err)
-    }
-}
-
-
-const getCodiciVariazioni = async (pv) => {
-    try {
-        let data = formatDataToAS(new Date())
-        if (pv === 'PR') pv = 'MI'
-        let result = await getVariazioniFunc(data, pv)
-        //console.log(result)
-        if (result.error)
-            return false
-        else
-            return result.map(x => { return x.ANCODI.trim() })
-    } catch (err) {
-        console.log(err)
-        logger.error(err)
-    }
-}
-
-
-const getVariazioni = async (pv) => {
-    try {
-        let data = formatDataToAS(new Date())
-        if (pv === 'PR') pv = 'MI'
-        let result = await getVariazioniFunc(data, pv)
-        if (result.error)
-            return false
-        else
-            return result
-    } catch (err) {
-        console.log(err)
-        logger.error(err)
-    }
-
-}
 
 const variazioniAutomatiche = async (pv) => {
     try {
@@ -115,7 +47,7 @@ const variazioniAutomatiche = async (pv) => {
         //console.log(codici)
         if (codici) {
             if (codici.length > 0) {
-                let finanziaria = "autovariazione"//req.body.finanziaria
+                let finanziaria = "auto"//req.body.finanziaria
                 let scenario = null//req.body.scenario
                 let datiEtichette = await getDatiEtichette(pv, codici)
 
@@ -233,7 +165,7 @@ router.post('/datatoses', async (req, res, next) => {
 
         let codici = req.body.codici
         if (codici.length > 0) {
-            let finanziaria = "autoassegna"//req.body.finanziaria
+            let finanziaria = req.body.finanziaria
             let scenario = req.body.scenario
 
             let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
@@ -313,10 +245,7 @@ router.get('/scenarios', async (req, res, next) => {
     }
 })
 
-function formatDataToAS(data) {
-    let ASFormatted = data.toISOString().substring(0, 4) + "-" + data.toISOString().substring(5, 7) + "-" + data.toISOString().substring(8, 10)
-    return ASFormatted
-}
+
 
 
 // ottieni gli id delle etichette associate al codice
@@ -324,6 +253,7 @@ router.get('/variazioni', async (req, res, next) => { // se aggiunti ?group=true
     try {
         let pv = req.query.pv ? req.query.pv : req.user.pv.sigla
         let group = req.query.group
+        //    console.log("variazioni " + pv)
         let variazioni = await getVariazioni(pv)
 
         if (variazioni) {

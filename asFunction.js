@@ -13,6 +13,72 @@ const connectionConfig = {
     loginTimeout: 3,
 }
 
+function formatDataToAS(data) {
+    let ASFormatted = data.toISOString().substring(2, 4) + data.toISOString().substring(5, 7) + data.toISOString().substring(8, 10)
+    return ASFormatted
+}
+
+
+const getDatiEtichette = async (pv, codici) => {
+    try {
+        if (pv === "PR") pv = 'MI'
+        let result = []
+        console.log(codici)
+        if (codici) {
+            let datoProvv = {}
+            for (let i = 0; i < codici.length; i++) {
+                datoProvv = await getDatiArticolo(codici[i], pv)
+                result.push(datoProvv)
+            }
+            if (result[0]) {
+                return result
+            }
+            else {
+                return false
+            }
+        } else {
+            return ("Mancano dati necessari");
+        }
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+}
+
+
+const getCodiciVariazioni = async (pv) => {
+    try {
+        let data = formatDataToAS(new Date())
+        if (pv === 'PR') pv = 'MI'
+        let result = await getVariazioniFunc(data, pv)
+        //console.log(result)
+        if (result.error)
+            return false
+        else
+            return result.map(x => { return x.ANCODI.trim() })
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+}
+
+
+const getVariazioni = async (pv) => {
+    try {
+        let data = formatDataToAS(new Date())
+        if (pv === 'PR') pv = 'MI'
+        let result = await getVariazioniFunc(data, pv)
+        if (result.error)
+            return false
+        else
+            return result
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+
+}
+
 
 // funzione che elimina i caratteri vuoti su ogni campo in formato stringa
 function trimObjectFields(obj) {
@@ -42,19 +108,14 @@ function mergeCARFields(data) {
     return mergedString;
 }
 
-function formatDataToAS(data) {
-    let ASFormatted = data.toISOString().substring(2, 4) + data.toISOString().substring(5, 7) + data.toISOString().substring(8, 10)
-    return ASFormatted
-}
+
 
 async function getVariazioniFunc(data, pv) {
     try {
-        let giorno = new Date(data)
-
         const AS = await odbc.connect(connectionConfig)
-        const query = `SELECT  ANCODI,LSSFAM,PAPVEN,PADATA,PAORA,PAFLAT,PAPPAT,PAFLAV,PAPPAV,LSDESC,concat(T2.LSLINE,T2.LSSETT) AS KEY,ANGRUP,ANSTGR FROM newstore.lprat,(Select ANCODI,ANGRUP,ANSTGR from bremag.artic) AS T0,(Select LSSFAM,LSSETT,LSLINE from board.lisea1) as T1, (Select LSLINE,LSSETT,LSDESC from board.lisea1 where LSFAMI = '' and LSSETT != '' ) as T2 where (T0.ANCODI = PACODI) and ((concat(T0.ANGRUP,T0.ANSTGR) = T1.LSSFAM) and (concat(T1.LSLINE,T1.LSSETT) = concat(T2.LSLINE,T2.LSSETT))) and (PAPVEN='${pv}'and PADATA='${formatDataToAS(giorno)}') Order by PADATA DESC,PAORA DESC,LSDESC,concat(T2.LSLINE,T2.LSSETT),ANGRUP,ANSTGR`
+        const query = `SELECT  ANCODI,LSSFAM,PAPVEN,PADATA,PAORA,PAFLAT,PAPPAT,PAFLAV,PAPPAV,LSDESC,concat(T2.LSLINE,T2.LSSETT) AS KEY,ANGRUP,ANSTGR FROM newstore.lprat,(Select ANCODI,ANGRUP,ANSTGR from bremag.artic) AS T0,(Select LSSFAM,LSSETT,LSLINE from board.lisea1) as T1, (Select LSLINE,LSSETT,LSDESC from board.lisea1 where LSFAMI = '' and LSSETT != '' ) as T2 where (T0.ANCODI = PACODI) and ((concat(T0.ANGRUP,T0.ANSTGR) = T1.LSSFAM) and (concat(T1.LSLINE,T1.LSSETT) = concat(T2.LSLINE,T2.LSSETT))) and (PAPVEN='${pv}'and PADATA='${data}') Order by PADATA DESC,PAORA DESC,LSDESC,concat(T2.LSLINE,T2.LSSETT),ANGRUP,ANSTGR`
         const result = await AS.query(query)
-        // console.log(query)
+        //console.log(query)
         //console.log(result)
         AS.close()
         if (result) {
@@ -120,7 +181,7 @@ async function getDatiArticolo(codice, pv) {
                 result[0].IMGLINK = linkImg
                 result[0].ECATLINK = linkEcat
                 result[0].CARATTERISTICHE = mergeCARFields(result[0])
-               // console.log(result[0])
+                // console.log(result[0])
                 return (result[0]);
             }
             else {
@@ -174,5 +235,8 @@ let getActPrice = async (product) => {
 module.exports = {
     getActPrice: getActPrice,
     getDatiArticolo: getDatiArticolo,
-    getVariazioniFunc: getVariazioniFunc
+    getVariazioniFunc: getVariazioniFunc,
+    getDatiEtichette: getDatiEtichette,
+    getCodiciVariazioni: getCodiciVariazioni,
+    getVariazioni: getVariazioni
 }

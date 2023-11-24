@@ -7,7 +7,7 @@ const MODE = process.env.MODE
 const logger = require('./logger');
 const axios = require('axios');
 
-const { getDatiFinanziaria, getDatiFinanziariaDinamic } = require('./database/finanziariaConnection')
+const { getDatiFinanziariaDinamic } = require('./database/finanziariaConnection')
 const { getIdScenarioFromName, getTagFromScenarioId } = require('./database/etagConnection');
 const { generaTokenWSI } = require('./routingUtility')
 
@@ -112,11 +112,11 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
             for (let i = 0; i < datiEtichette.length; i++) {
                 if (!datiEtichette[i].error) {
                     //datiEtichette[i].datiFin = await getDatiFinanziaria(datiEtichette[i].PREZZO, pv, finanziaria)
-                    datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i].PREZZO, pv)
+                    datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i].PREZZO, pv, finanziaria)
                 }
             }
         }
-       // console.log(datiEtichette)
+        // console.log(datiEtichette)
         let arrayErrors = []
         let arrayToSes = []
         for (let y = 0; y < datiEtichette.length; y++) {
