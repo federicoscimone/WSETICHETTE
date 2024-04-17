@@ -1,7 +1,7 @@
 require("dotenv").config()
 const mongoDbUrl = process.env.MONGODBURL
 const { ObjectId, MongoClient } = require("mongodb");
-const logger = require("../logger")
+const logger = require("../logger").default
 const dbFinanz = "etag"
 const collFinanz = 'finanziarie'
 
@@ -147,18 +147,20 @@ async function getDatiFinanziariaDinamic(importo, pv, selectedFin) {
         let finData = {}
         let error = ''
         let finanziarie = await getCurrentFin(mongoClient, pv)
-
+        //  console.log(selectedFin)
         // se viene scelta manualmente la finanziaria allora la cerca tra quelle attiva e la assegna all'array come unica possibilità
-        if (selectedFin && selectedFin !== "auto") {
+        if (selectedFin) {
             let findFin = finanziarie.find(fin => fin.nome === selectedFin)
+            //     console.log(findFin)
             finanziarie = []
             finanziarie[0] = findFin
         }
 
-        //  console.log(selectedFin)
-        //console.log(finanziarie)
+
+        // console.log(finanziarie)
         if (finanziarie.length > 0) { // se trovo almeno una finanziaria attiva
             for (let i = 0; i < finanziarie.length; i++) { // per ogni finanziaria cerco la regola corrispondente e ne restituisco la prima che trovo
+
                 let finanziaria = finanziarie[i]
                 let regola = finanziaria.regole.find(r => {
                     return importo >= r.rangeInizio && importo <= r.rangeFine
@@ -216,18 +218,38 @@ async function getCurrentFin(client, pv) {
     }
 }
 
-// recupera ultimi X eventi
-async function getFinanziarie(client) {
+async function isNewFinancialDay(client, pv) {
     try {
         const finanz = client.db(dbFinanz).collection(collFinanz);
-        const result = await finanz.find().sort({ priority: 1 }).toArray()
-        return result
+        const today = new Date().toISOString()
+        const todayStart = today.substring(0, 10) + 'T00:00:00Z'
+        const todayEnd = today.substring(0, 10) + 'T00:00:00Z'
+        const query = {
+            abilitato: true,
+            dataInizio: { $gte: new Date(todayStart), $lte: new Date(todayEnd) },
+            puntiVendita: { $in: [pv] }
+        }
+        const result = await finanz.countDocuments(query)
+
+        return result > 0 ? true : false
     } catch (err) {
         console.log(err)
         return err;
     }
 }
 
+// recupera ultimi X eventi
+async function getFinanziarie(client, pv) {
+    try {
+        let query = pv ? { puntiVendita: { $in: [pv] } } : {}
+        const finanz = client.db(dbFinanz).collection(collFinanz);
+        const result = await finanz.find(query).sort({ priority: 1 }).toArray()
+        return result
+    } catch (err) {
+        console.log(err)
+        return err;
+    }
+}
 
 
 async function switchFinanziaria(client, id, user) {
@@ -392,5 +414,6 @@ module.exports = {
     deleteFinanziaria: deleteFinanziaria,
     postRegola: postRegola,
     deleteRegola: deleteRegola,
-    getCurrentFin: getCurrentFin
+    getCurrentFin: getCurrentFin,
+    isNewFinancialDay: isNewFinancialDay
 }

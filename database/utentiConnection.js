@@ -1,6 +1,6 @@
 require("dotenv").config();
 const dbUtenti = "etag"
-const logger = require("../logger")
+const logger = require("../logger").default
 
 
 // aggiunge evento
@@ -22,7 +22,7 @@ async function addEvent(client, dati) {
 async function getEvent(client, user) {
     try {
         const event = client.db(dbUtenti).collection("eventi");
-        const result = await event.find({ utente: user }).sort({ data: -1 }).limit(10).toArray()
+        const result = await event.find({ utente: { $in: [user, "system"] } }).sort({ data: -1 }).limit(10).toArray()
         return result
     } catch (err) {
         return err;

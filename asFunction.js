@@ -3,7 +3,7 @@ const IPECAT = process.env.IPECAT
 const USERECAT = process.env.USERECAT
 
 const odbc = require("odbc");
-const logger = require('./logger');
+const logger = require('./logger')
 
 const connectString = "DSN=AS400;UserID=ACCLINUX;Password=ACCLINOX"
 
@@ -23,7 +23,7 @@ const getDatiEtichette = async (pv, codici) => {
     try {
         if (pv === "PR") pv = 'MI'
         let result = []
-        console.log(codici)
+        //console.log(codici)
         if (codici) {
             let datoProvv = {}
             for (let i = 0; i < codici.length; i++) {
@@ -49,7 +49,7 @@ const getDatiEtichette = async (pv, codici) => {
 const getCodiciVariazioni = async (pv) => {
     try {
         let data = formatDataToAS(new Date())
-        if (pv === 'PR') pv = 'MI'
+        if (pv === 'PR') pv = 'CP'
         let result = await getVariazioniFunc(data, pv)
         //console.log(result)
         if (result.error)
@@ -164,7 +164,15 @@ async function getDatiArticolo(codice, pv) {
                 }
             }
 
-            const query = `select newstore.anart.ancodi as codice,bremag.artic.anceur as codiceEuronics, newstore.anart.anbaco as barcode,newstore.anart.andesc as descrizione, prim_dat.march.mrdesc as marca,sbepomat.carbru.car01 as car1,sbepomat.carbru.car02 as car2,sbepomat.carbru.car03 as car3,sbepomat.carbru.car04 as car4,sbepomat.carbru.car05 as car5,sbepomat.carbru.car06 as car6,sbepomat.carbru.car07 as car7,sbepomat.carbru.car08 as car8,sbepomat.carbru.car09 as car9,sbepomat.carbru.car10 as car10,sbepomat.carbru.car11 as car11,sbepomat.carbru.car12 as car12,sbepomat.carbru.car13 as car13,sbepomat.carbru.car14 as car14,sbepomat.carbru.carprp as prezzoPrecedente, sbepomat.carbru.carprc as prezzoConsigliato, newstore.lipin.liprez as prezzo,newstore.lipid.liprez as prezzoFuturo, newstore.lipin.liprev as prezzoVantage,newstore.prmin.pmprez as prezzoMinimo from newstore.anart join prim_dat.march on mrcodi = newstore.anart.anmarc left join sbepomat.carbru on sbepomat.carbru.codbru= newstore.anart.ancodi join newstore.lipin on newstore.lipin.licodi=newstore.anart.ancodi join newstore.lipid on newstore.lipid.licodi=newstore.anart.ancodi join bremag.artic on bremag.artic.ancodi = newstore.anart.ancodi join newstore.prmin on newstore.prmin.pmcodi = newstore.anart.ancodi where newstore.anart.${tipo} = '${codice}' and newstore.lipin.lipven='${pv}'  and newstore.lipid.lipven='${pv}' and newstore.prmin.pmpven='${pv}'`
+            const query = `select newstore.anart.ancodi as codice,bremag.artic.anceur as codiceEuronics, newstore.anart.anbaco as barcode,newstore.anart.andesc as descrizione, prim_dat.march.mrdesc as marca,sbepomat.carbru.car01 as car1,sbepomat.carbru.car02 as car2,sbepomat.carbru.car03 as car3,sbepomat.carbru.car04 as car4,sbepomat.carbru.car05 as car5,sbepomat.carbru.car06 as car6,sbepomat.carbru.car07 as car7,sbepomat.carbru.car08 as car8,sbepomat.carbru.car09 as car9,sbepomat.carbru.car10 as car10,sbepomat.carbru.car11 as car11,sbepomat.carbru.car12 as car12,sbepomat.carbru.car13 as car13,sbepomat.carbru.car14 as car14,sbepomat.carbru.carprp as prezzoPrecedente, sbepomat.carbru.carprc as prezzoConsigliato, newstore.lipin.liprez as prezzo,newstore.lipid.liprez as prezzoFuturo, newstore.lipin.liprev as prezzoVantage,newstore.prmin.pmprez as prezzoMinimo 
+            from newstore.anart 
+            join prim_dat.march on mrcodi = newstore.anart.anmarc 
+            left join newstore.prmin on newstore.prmin.pmcodi = newstore.anart.ancodi and newstore.prmin.pmpven='${pv}'
+            left join sbepomat.carbru on sbepomat.carbru.codbru= newstore.anart.ancodi 
+            join newstore.lipin on newstore.lipin.licodi=newstore.anart.ancodi and newstore.lipin.lipven='${pv}'
+            join newstore.lipid on newstore.lipid.licodi=newstore.anart.ancodi  and newstore.lipid.lipven='${pv}' 
+            join bremag.artic on bremag.artic.ancodi = newstore.anart.ancodi 
+            where newstore.anart.${tipo} = '${codice}' `
 
             const result = await AS.query(query).catch(err => { console.log(err) })
             AS.close()

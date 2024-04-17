@@ -1,14 +1,18 @@
 require("dotenv").config();
 const SESKEY = process.env.SESKEY
+const SESKEYPRO = process.env.SESKEYPRO
 const WSIURL = process.env.WSIURL
 const serviceWSIPass = process.env.SERVICEPASS
 const serviceWSIUser = process.env.SERVICEUSER
 const MODE = process.env.MODE
+const mongoDbUrl = process.env.MONGODBURL
 const logger = require('./logger');
 const axios = require('axios');
+const { MongoClient } = require('mongodb')
+const mongoClient = new MongoClient(mongoDbUrl)
 
 const { getDatiFinanziariaDinamic } = require('./database/finanziariaConnection')
-const { getIdScenarioFromName, getTagFromScenarioId } = require('./database/etagConnection');
+const { getIdScenarioFromName, getTagFromScenarioId, getScenariosName } = require('./database/etagConnection');
 const { generaTokenWSI } = require('./routingUtility')
 
 const getSesId = async (sigla) => {
@@ -25,6 +29,96 @@ const getSesId = async (sigla) => {
     })
     return resp.data
 }
+
+const getLabelsListVusion = async (siglapv, page) => {
+    try {
+
+        let idSes = await getSesId(siglapv)
+        page = page ? page : 1
+        let result = await axios.get(`https://api-eu.vusion.io/vusion-pro/v1/stores/${idSes}/labels?includes=matching.items.custom,matching.items.id,matching.items.price,labelId,status,hardware.typeName&pageSize=1000&page=${page}`, {
+            headers: {
+                'Ocp-Apim-Subscription-Key': SESKEYPRO
+            }
+        }).catch(err => {
+            console.log(err)
+            logger.error(err)
+            return err
+        })
+
+        // console.log(result.data)
+
+        return result.data
+
+    } catch (err) {
+        logger.error("errore " + err)
+    }
+}
+
+const getOrientFromName = (scenarios, scenario) => {
+    if (scenario) {
+        let find = scenarios.find(e => e.scenarioId === scenario)
+        return find.orientation
+    } else {
+        return 'orizzontale'
+    }
+
+}
+
+const getScenarioTags = (scenarios, scenario) => {
+    if (scenario) {
+        let find = scenarios.find(e => e.scenarioId === scenario)
+        if (find.tag)
+            return find.tag
+        else return []
+    } else {
+        return []
+    }
+
+}
+
+
+const getLabelsList = async (siglapv) => {
+    try {
+        let scenarios = await getScenariosName(mongoClient)
+        let result = await getLabelsListVusion(siglapv)
+        let labels = result.values
+        console.log(labels)
+        let numPage = Math.floor(result.count / 1000) + 1
+        if (numPage > 1) {
+            for (let i = 2; i <= numPage; i++) {
+                result = await getLabelsListVusion(siglapv, i)
+                labels = labels.concat(result.values)
+            }
+        }
+        let list = []
+
+        labels.forEach(label => {
+            if (label.matching && label.matching.items[0].custom) {
+                let prezzo = label.matching.items[0].price
+                let codice = label.matching.items[0].id
+                let scenario = label.matching.items[0].custom.scenario
+                let type = label.hardware.typeName
+                let isRataScenario = getScenarioTags(scenarios, scenario).includes('rata')
+                let orientamento = getOrientFromName(scenarios, scenario)
+
+                list.push({
+                    codice: codice,
+                    scenario: scenario,
+                    orientamento: orientamento,
+                    rata: isRataScenario,
+                    type: type,
+                    prezzo: prezzo
+                })
+            }
+        })
+        return list
+
+    } catch (err) {
+        console.log(err)
+        logger.error("errore " + err)
+    }
+}
+
 
 const getLabelsFromItem = async (siglapv, codice) => {
     try {
@@ -44,7 +138,6 @@ const getLabelsFromItem = async (siglapv, codice) => {
         logger.error("errore " + err)
     }
 }
-
 
 const postItems = async (siglapv, dati) => {
     try {
@@ -104,21 +197,37 @@ const matchItems = async (siglapv, labelID, scenarioID, itemID) => {
 
 
 
-const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) => {
+const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, currentLabels) => {
     try {
-        if (scenario === "dataOnly") scenario = null
-        //console.log(finanziaria)
-        if (finanziaria) {
-            for (let i = 0; i < datiEtichette.length; i++) {
-                if (!datiEtichette[i].error) {
-                    //datiEtichette[i].datiFin = await getDatiFinanziaria(datiEtichette[i].PREZZO, pv, finanziaria)
-                    datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i].PREZZO, pv, finanziaria)
-                }
-            }
-        }
-        // console.log(datiEtichette)
         let arrayErrors = []
         let arrayToSes = []
+        if (scenario === "dataOnly") scenario = null
+
+        for (let i = 0; i < datiEtichette.length; i++) {
+
+            // VERIFICA SCENARIO ATTUALE E ORIENTAMENTO DA APPLICARE
+            let CODICE = datiEtichette[i].CODICE
+            if (currentLabels) {
+                let find = currentLabels.find(e => e.codice === CODICE)
+                //console.log(find)
+                if (find) {
+                    if (find.orientamento === 'orizzontale') scenario = 'prezzoConsRata'
+                    else scenario = 'prezzoConsRataVert'
+                }
+                else {
+                    arrayErrors.push({ codice: CODICE, error: `Nessuna etichetta associata al codice` })
+                }
+                console.log(CODICE + "-----------------------------" + scenario)
+            }
+            ///////////////////////////////////////////////////////
+
+            if (!datiEtichette[i].error) {
+                datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i].PREZZO, pv, finanziaria)
+            }
+        }
+
+        // console.log(datiEtichette)
+
         for (let y = 0; y < datiEtichette.length; y++) {
             if (datiEtichette[y]) {
                 if (datiEtichette[y].error) {
@@ -150,18 +259,18 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                         }
                     }
 
-                    if (finanziaria) {
-                        if (datiEtichette[y].datiFin.error) {
-                            // arrayErrors.push({ error: datiEtichette[y].datiFin.error, codice: datiEtichette[y].CODICE })
-                        } else {
-                            toSES.custom.rata = datiEtichette[y].datiFin.rata.toString()
-                            toSES.custom.nrate = datiEtichette[y].datiFin.nrate.toString()
-                            toSES.custom.tan = datiEtichette[y].datiFin.tan.toString()
-                            toSES.custom.taeg = datiEtichette[y].datiFin.taeg.toString()
-                            toSES.custom.proroga = datiEtichette[y].datiFin.proroga.toString()
-                            toSES.custom.finanziaria = datiEtichette[y].datiFin.nome.toString()
-                        }
+                    // if (finanziaria) {
+                    if (datiEtichette[y].datiFin.error) {
+                        // arrayErrors.push({ error: datiEtichette[y].datiFin.error, codice: datiEtichette[y].CODICE })
+                    } else {
+                        toSES.custom.rata = datiEtichette[y].datiFin.rata.toString()
+                        toSES.custom.nrate = datiEtichette[y].datiFin.nrate.toString()
+                        toSES.custom.tan = datiEtichette[y].datiFin.tan.toString()
+                        toSES.custom.taeg = datiEtichette[y].datiFin.taeg.toString()
+                        toSES.custom.proroga = datiEtichette[y].datiFin.proroga.toString()
+                        toSES.custom.finanziaria = datiEtichette[y].datiFin.nome.toString()
                     }
+                    // }
 
 
                     if (scenario) {
@@ -233,7 +342,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                             }
 
 
-                            // se l'importo è finanziabile e il prezzo minimo non è valido
+                            // se l'importo è finanziabile e il prezzo consigliato non è valido
                             if (!datiEtichette[y].datiFin.error && toSES.custom.prezzoConsigliato <= toSES.price) {
                                 // allora applico lo scenario Finanziaria
                                 scenarioToses = 'TASSO0'
@@ -318,6 +427,8 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
 
 
                         toSES.custom.scenario = scenarioToses
+                    } else {
+
                     }
 
 
@@ -335,7 +446,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user) =
                         if (datiEtichette[y].icon.IDICO6) toSES.custom.ico6 = datiEtichette[y].icon.IDICO6.toString()
                         if (datiEtichette[y].icon.VALUE6) toSES.custom.icovalue6 = datiEtichette[y].icon.VALUE6 === '0' ? "" : datiEtichette[y].icon.VALUE6.toString()
                     }
-                    //console.log(toSES)
+                    console.log(toSES)
                     arrayToSes.push(toSES)
                 }
             } else { console.log("trovato null") }
@@ -398,5 +509,6 @@ module.exports = {
     postItems: postItems,
     generateSesJson: generateSesJson,
     generateSesScenarioJson: generateSesScenarioJson,
-    matchItems: matchItems
+    matchItems: matchItems,
+    getLabelsList: getLabelsList
 }

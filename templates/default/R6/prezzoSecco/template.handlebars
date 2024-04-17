@@ -1,0 +1,154 @@
+<html>
+
+<head>
+    <style>
+        @page {
+            size: A4 landscape;
+        }
+
+        /* Impostazioni body */
+        body {
+            font-family: Impact;
+            font-size: 35px;
+            text-align: left;
+            width: 297mm;
+            height: 145mm;
+        }
+
+        .background {
+            padding: 0mm;
+        }
+
+        .marca {
+            position: absolute;
+            top: 3mm;
+            left: 115mm;
+            font-size: 18mm;
+            font-weight: 200;
+            color: #080000;
+        }
+
+        hr {
+            position: absolute;
+            color: #080000;
+            top: 22mm;
+            left: 115mm;
+            width: 179mm;
+        }
+
+        .codice {
+            text-align: left;
+            top: 28mm;
+            left: 115mm;
+            width: 170mm;
+            font-size: 8mm;
+            position: absolute;
+            color: #666666;
+        }
+
+        .caratteristiche {
+            width: 180mm;
+            top: 38mm;
+            left: 115mm;
+            font-size: 6mm;
+            position: absolute;
+            text-align: justify;
+            color: #474444;
+        }
+
+        /*PREZZO*/
+        .prezzo {
+            position: absolute;
+            width: 290mm;
+            top: 88mm;
+            font-size: 40mm;
+            color: #ED7117;
+            padding: 0;
+            margin: 0;
+            display: flex;
+            justify-content: end;
+            align-items: end;
+        }
+
+        .prezzoeuro {
+            text-align: left;
+            font-size: 50%;
+        }
+
+        .prezzoint {
+            position: relative;
+            margin-right: 1mm;
+            text-align: right;
+
+        }
+
+        .prezzodec {
+            position: relative;
+            text-align: left;
+            font-size: 50%;
+            top: -12mm;
+
+        }
+
+        .immagine {
+            top: 150mm;
+            left: 20mm;
+            font-size: 6.5mm;
+            text-align: right;
+            position: absolute;
+        }
+
+
+        .stelleimg {
+            width: 20mm;
+        }
+
+        .stelle {
+            position: absolute;
+            top: 100mm;
+            left: 115mm;
+            width: 40mm;
+            font-size: 8mm;
+            color: #035D98;
+            font-family: impact;
+        }
+
+
+        .qrcode {
+            position: absolute;
+            top: 2mm;
+            left: 265mm;
+            background: #FFFFFF;
+            width: 24mm;
+            text-align: left;
+            position: absolute;
+        }
+
+        .barcodeimg {
+            position: absolute;
+            top: 28mm;
+            left: 262mm;
+            width: 30mm;
+            text-align: left;
+        }
+    </style>
+
+</head>
+
+<body>
+    <img class="background" src="{{BACKGROUNDURL}}" />
+    <div class="marca">{{MARCA}}</div>
+    <hr>
+    <div class="codice">{{CODICE}}</div>
+    <div class="caratteristiche"> {{CARATTERISTICHE}}</div>
+    <div class="prezzo">
+        <div class="prezzoint"><span class="prezzoeuro">€</span>{{PREZZOINT}}</div>
+        <div class="prezzodec">,{{PREZZODEC}}</div>
+    </div>
+
+    <img class="qrcode" src={{QRCODE}} />
+    <div class="stelle"> <img class="stelleimg" src={{STARIMG}}>Vale {{STELLE}} Stelle!</div>
+    <img class="barcodeimg" src={{BARCODEIMG}}>
+</body>
+
+</html>

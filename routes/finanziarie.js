@@ -10,7 +10,8 @@ const mongoClient = new MongoClient(mongoDbUrl)
 
 router.get('/', async (req, res, next) => {
     try {
-        let getResult = await getFinanziarie(mongoClient)
+        const pv = req.query.pv
+        let getResult = await getFinanziarie(mongoClient, pv)
         if (getResult[0]) {
 
             res.status(200).send(getResult)

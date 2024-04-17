@@ -9,7 +9,8 @@ const cron = require('node-cron');
 const { getVariazioni, getCodiciVariazioni, getDatiEtichette } = require('../asFunction')
 const { getScenariosName } = require('../database/etagConnection')
 const { addEvent } = require('../database/utentiConnection')
-const { getLabelsFromItem, postItems, generateSesJson, matchItems } = require('../sesApi')
+const { getLabelsFromItem, postItems, generateSesJson, matchItems, getLabelsList } = require('../sesApi');
+const { getCurrentFin, isNewFinancialDay } = require("../database/finanziariaConnection");
 const mongoClient = new MongoClient(mongoDbUrl)
 
 //SCHEDULING per le variazioni automatiche, impostato per ogni giorno 06:30, 07:30, 08:30
@@ -42,24 +43,33 @@ cron.schedule('40 6,7,8 * * *', async () => {
 const variazioniAutomatiche = async (pv) => {
     try {
 
-        //let wsi = await generaTokenWSI(serviceWSIUser, serviceWSIPass)
         let codici = await getCodiciVariazioni(pv)
-        //console.log(codici)
+        let currentLabels = await getLabelsList(pv)
+        let isNewFinDay = await isNewFinancialDay(mongoClient, pv)
+        console.log(isNewFinDay)
+
+        if (isNewFinDay) {
+            let labelConFin = currentLabels.filter(l => l.prezzo > 200 && l.type !== '2.6 BWR').map(e => e.codice)
+            codici = codici.concat(labelConFin)
+        }
+
+        // console.log(codici)
         if (codici) {
             if (codici.length > 0) {
-                let finanziaria = "auto"//req.body.finanziaria
-                let scenario = null//req.body.scenario
+                let finanziaria = null //req.body.finanziaria
+                let scenario = null   //req.body.scenario
                 let datiEtichette = await getDatiEtichette(pv, codici)
 
 
                 if (datiEtichette) {
-                    let json = await generateSesJson(pv, datiEtichette, finanziaria, scenario, 'system.user')
+                    let json = await generateSesJson(pv, datiEtichette, finanziaria, scenario, 'system.user', currentLabels)
 
                     if (json.error) {
                         logger.error("errore nella generazione del json per ses " + json.error)
                     } else {
                         arrayToSes = json.json
                         arrayErrors = json.errors
+                        //console.log(arrayToSes)
                         let resToses = await postItems(pv, arrayToSes)
                         let correlationId = resToses.data.correlationId
 
@@ -110,7 +120,7 @@ router.post('/match', async (req, res, next) => {
             let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
 
             if (datiEtichette) {
-                let json = await generateSesJson(pv, datiEtichette, "finanziaria", scenario, user)
+                let json = await generateSesJson(pv, datiEtichette, finanziaria, scenario, user)
 
                 if (json.error) {
                     res.status(400).send(json[0].custom)
@@ -168,13 +178,14 @@ router.post('/datatoses', async (req, res, next) => {
             let finanziaria = req.body.finanziaria
             let scenario = req.body.scenario
 
+            // console.log(`${codici[0]} - ${scenario} - ${finanziaria}`)
             let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
 
             if (datiEtichette) {
                 let json = await generateSesJson(pv, datiEtichette, finanziaria, scenario, user)
                 // console.log(json)
                 if (json.error) {
-                    res.status(400).send(json[0].custom)
+                    res.status(400).send(json)
                 } else {
                     arrayToSes = json.json
                     arrayErrors = json.errors
@@ -246,9 +257,6 @@ router.get('/scenarios', async (req, res, next) => {
 })
 
 
-
-
-// ottieni gli id delle etichette associate al codice
 router.get('/variazioni', async (req, res, next) => { // se aggiunti ?group=true vengono restituite le variazioni raggruppate per settore gruppo sottogruppo
     try {
         let pv = req.query.pv ? req.query.pv : req.user.pv.sigla
@@ -290,8 +298,6 @@ router.get('/variazioni', async (req, res, next) => { // se aggiunti ?group=true
     }
 })
 
-
-// ottieni gli id delle etichette associate al codice
 router.get('/autovariazione', async (req, res, next) => {
     try {
         let pv = req.query.pv
@@ -309,6 +315,26 @@ router.get('/autovariazione', async (req, res, next) => {
         logger.error(err)
     }
 })
+
+router.get('/labellist', async (req, res, next) => {
+    try {
+        let pv = req.query.pv
+        let list = await getLabelsList(pv)
+        // console.log(variazioni)
+        if (list) {
+            res.status(200).send(list)
+        }
+        else {
+            res.status(404).send({ errors: "errore nell'ottenimento della lista delle etichette" });
+        }
+
+    } catch (err) {
+        console.log(err)
+        logger.error(err)
+    }
+})
+
+
 
 
 
