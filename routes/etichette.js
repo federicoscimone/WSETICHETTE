@@ -43,7 +43,8 @@ cron.schedule('40 6,7,8 * * *', async () => {
 const variazioniAutomatiche = async (pv) => {
     try {
 
-        let codici = await getCodiciVariazioni(pv)
+        //let codici = await getCodiciVariazioni(pv)
+        let codici = []
         let currentLabels = await getLabelsList(pv)
         let isNewFinDay = await isNewFinancialDay(mongoClient, pv)
         console.log(isNewFinDay)

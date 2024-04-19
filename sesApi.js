@@ -44,9 +44,6 @@ const getLabelsListVusion = async (siglapv, page) => {
             logger.error(err)
             return err
         })
-
-        // console.log(result.data)
-
         return result.data
 
     } catch (err) {
@@ -76,13 +73,11 @@ const getScenarioTags = (scenarios, scenario) => {
 
 }
 
-
 const getLabelsList = async (siglapv) => {
     try {
         let scenarios = await getScenariosName(mongoClient)
         let result = await getLabelsListVusion(siglapv)
         let labels = result.values
-        console.log(labels)
         let numPage = Math.floor(result.count / 1000) + 1
         if (numPage > 1) {
             for (let i = 2; i <= numPage; i++) {
@@ -203,41 +198,23 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
         let arrayToSes = []
         if (scenario === "dataOnly") scenario = null
 
+        //recupero dati finanziari per ogni codice
         for (let i = 0; i < datiEtichette.length; i++) {
-
-            // VERIFICA SCENARIO ATTUALE E ORIENTAMENTO DA APPLICARE
-            let CODICE = datiEtichette[i].CODICE
-            if (currentLabels) {
-                let find = currentLabels.find(e => e.codice === CODICE)
-                //console.log(find)
-                if (find) {
-                    if (find.orientamento === 'orizzontale') scenario = 'prezzoConsRata'
-                    else scenario = 'prezzoConsRataVert'
-                }
-                else {
-                    arrayErrors.push({ codice: CODICE, error: `Nessuna etichetta associata al codice` })
-                }
-                console.log(CODICE + "-----------------------------" + scenario)
-            }
-            ///////////////////////////////////////////////////////
-
             if (!datiEtichette[i].error) {
                 datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i].PREZZO, pv, finanziaria)
             }
         }
 
-        // console.log(datiEtichette)
-
         for (let y = 0; y < datiEtichette.length; y++) {
             if (datiEtichette[y]) {
                 if (datiEtichette[y].error) {
                     arrayErrors.push(datiEtichette[y])
-
                 }
                 else {
                     //composizione json per vcloud secondo la semantica stabilita su studio
+                    let CODICE = datiEtichette[y].CODICE
                     let toSES = {
-                        id: datiEtichette[y].CODICE,
+                        id: CODICE,
                         price: datiEtichette[y].PREZZO,
                         description: datiEtichette[y].DESCRIZIONE,
                         references: [datiEtichette[y].BARCODE],
@@ -261,7 +238,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
 
                     // if (finanziaria) {
                     if (datiEtichette[y].datiFin.error) {
-                        // arrayErrors.push({ error: datiEtichette[y].datiFin.error, codice: datiEtichette[y].CODICE })
+                        // procedi solo se il recupero della finanziaria non ha generato errori
                     } else {
                         toSES.custom.rata = datiEtichette[y].datiFin.rata.toString()
                         toSES.custom.nrate = datiEtichette[y].datiFin.nrate.toString()
@@ -272,9 +249,20 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                     }
                     // }
 
+                    // VERIFICA SCENARIO ATTUALE E ORIENTAMENTO DA APPLICARE -  solo se viene passato currentLabel quindi solo quando la variazione è automatica
+                    if (currentLabels) {
+                        let find = currentLabels.find(e => e.codice === CODICE)
+                        if (find) {
+                            if (find.orientamento === 'verticale') scenario = 'prezzoConsRataVert'
+                            else scenario = 'prezzoConsRata'
+                        }
+                        else {
+                            arrayErrors.push({ codice: CODICE, error: `Nessuna etichetta associata al codice` })
+                        }
+                    }
+                    ///////////////////////////////////////////////////////
 
                     if (scenario) {
-
                         let scenarioToses = scenario
 
                         //  GESTIONE SCENARI NON APPLICABILI - UNA SERIE DI CONDIZIONI CHE IN CASO DI SCENARIO NON APPLICABILE NE SCELGONO IL PIU VICINO CHE PUò ESSERE APPLICATO
@@ -430,8 +418,6 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                     } else {
 
                     }
-
-
                     if (datiEtichette[y].icon) {
                         if (datiEtichette[y].icon.IDICO1) toSES.custom.ico1 = datiEtichette[y].icon.IDICO1.toString()
                         if (datiEtichette[y].icon.VALUE1) toSES.custom.icovalue1 = datiEtichette[y].icon.VALUE1 === '0' ? "" : datiEtichette[y].icon.VALUE1.toString()
@@ -446,7 +432,6 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                         if (datiEtichette[y].icon.IDICO6) toSES.custom.ico6 = datiEtichette[y].icon.IDICO6.toString()
                         if (datiEtichette[y].icon.VALUE6) toSES.custom.icovalue6 = datiEtichette[y].icon.VALUE6 === '0' ? "" : datiEtichette[y].icon.VALUE6.toString()
                     }
-                    console.log(toSES)
                     arrayToSes.push(toSES)
                 }
             } else { console.log("trovato null") }
