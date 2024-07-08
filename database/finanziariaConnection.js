@@ -7,6 +7,8 @@ const collFinanz = 'finanziarie'
 
 const mongoClient = new MongoClient(mongoDbUrl)
 
+
+// vecchia funzione con inserimenti manuale deprecata e sostituita dalla versione dinamic
 async function getDatiFinanziaria(prezzo, pv, finanziaria) {
     try {
         let now = new Date()
@@ -31,8 +33,6 @@ async function getDatiFinanziaria(prezzo, pv, finanziaria) {
 
 
         if (pv === 'PR') finanziaria = 'Tan 0 Taeg Variabile'
-
-        //  console.log(finanziaria)
 
         //finanziaria tan e taeg zero
         if (finanziaria === 'Tan 0 Taeg 0') {
@@ -147,17 +147,13 @@ async function getDatiFinanziariaDinamic(importo, pv, selectedFin) {
         let finData = {}
         let error = ''
         let finanziarie = await getCurrentFin(mongoClient, pv)
-        //  console.log(selectedFin)
         // se viene scelta manualmente la finanziaria allora la cerca tra quelle attiva e la assegna all'array come unica possibilità
         if (selectedFin) {
             let findFin = finanziarie.find(fin => fin.nome === selectedFin)
-            //     console.log(findFin)
             finanziarie = []
             finanziarie[0] = findFin
         }
 
-
-        // console.log(finanziarie)
         if (finanziarie.length > 0) { // se trovo almeno una finanziaria attiva
             for (let i = 0; i < finanziarie.length; i++) { // per ogni finanziaria cerco la regola corrispondente e ne restituisco la prima che trovo
 
@@ -218,6 +214,7 @@ async function getCurrentFin(client, pv) {
     }
 }
 
+// funzione che verifica se oggi è partita una nuova finanziaria
 async function isNewFinancialDay(client, pv) {
     try {
         const finanz = client.db(dbFinanz).collection(collFinanz);
@@ -283,21 +280,15 @@ async function setFinanziaria(client, id, finanziara, user) {
         dataInizio.setHours(2);
         dataInizio.setMinutes(0);
         finanziara.dataInizio = dataInizio
-
         const dataFine = new Date(finanziara.dataFine)
         dataFine.setHours(23);
         dataFine.setMinutes(0);
         finanziara.dataFine = dataFine
-
         delete finanziara.dataCreazione
         let query = { _id: ObjectId(id) }
-
         delete finanziara._id // elimina il campo _id dall'oggetto per evitare errore in quando è un parametro immutabile
-
         let res = await finanz.updateOne(query, { $set: { ...finanziara } })
-
         return res
-
     } catch (err) {
         console.log(err)
         return err;
@@ -390,19 +381,16 @@ async function deleteRegola(client, id, regola, user) {
                         tan: regola.tan,
                         taeg: regola.taeg,
                         nRate: regola.nRate
-
                     }
                 },
                 $set: { utenteUltimaModifica: user, dataUltimaModifica: new Date() }
             })
-
         return res
     } catch (err) {
         console.log(err)
         return err;
     }
 }
-
 
 module.exports = {
     getDatiFinanziaria: getDatiFinanziaria,

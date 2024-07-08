@@ -43,10 +43,12 @@ cron.schedule('40 6,7,8 * * *', async () => {
 const variazioniAutomatiche = async (pv) => {
     try {
 
-        //let codici = await getCodiciVariazioni(pv)
-        let codici = []
+        let codici = await getCodiciVariazioni(pv)
+        //let codici = []
         let currentLabels = await getLabelsList(pv)
         let isNewFinDay = await isNewFinancialDay(mongoClient, pv)
+
+        console.log(currentLabels)
         console.log(isNewFinDay)
 
         if (isNewFinDay) {
@@ -54,7 +56,6 @@ const variazioniAutomatiche = async (pv) => {
             codici = codici.concat(labelConFin)
         }
 
-        // console.log(codici)
         if (codici) {
             if (codici.length > 0) {
                 let finanziaria = null //req.body.finanziaria
@@ -70,7 +71,6 @@ const variazioniAutomatiche = async (pv) => {
                     } else {
                         arrayToSes = json.json
                         arrayErrors = json.errors
-                        //console.log(arrayToSes)
                         let resToses = await postItems(pv, arrayToSes)
                         let correlationId = resToses.data.correlationId
 
@@ -129,7 +129,6 @@ router.post('/match', async (req, res, next) => {
                     arrayToSes = json.json
                     arrayErrors = json.errors
                     let resToses = await postItems(pv, arrayToSes)
-                    //console.log(resToses)
 
                     if (resToses.data) {
                         let correlationId = resToses.data.correlationId
@@ -146,7 +145,6 @@ router.post('/match', async (req, res, next) => {
                         } else {
                             res.status(400).send({ error: "errore nella comunicazione con SES durante il matching con l'etichetta " + label })
                         }
-
 
                     } else {
                         res.status(400).send({ error: "errore nella comunicazione con SES" })
@@ -178,13 +176,10 @@ router.post('/datatoses', async (req, res, next) => {
         if (codici.length > 0) {
             let finanziaria = req.body.finanziaria
             let scenario = req.body.scenario
-
-            // console.log(`${codici[0]} - ${scenario} - ${finanziaria}`)
             let datiEtichette = await getDatiEtichette(pv, codici, req.user.WSIToken)
 
             if (datiEtichette) {
                 let json = await generateSesJson(pv, datiEtichette, finanziaria, scenario, user)
-                // console.log(json)
                 if (json.error) {
                     res.status(400).send(json)
                 } else {
@@ -207,7 +202,6 @@ router.post('/datatoses', async (req, res, next) => {
                         let returnData = { arrayToSes: arrayToSes, inviati: arrayToSes.length, errori: arrayErrors.length, errorList: arrayErrors, codici: codici, utente: user, pv: pv, scenario: scenario, finanziaria: finanziaria, type: "update" }
                         res.status(200).send(returnData)
                     }
-
                 }
             }
             else {
@@ -262,7 +256,6 @@ router.get('/variazioni', async (req, res, next) => { // se aggiunti ?group=true
     try {
         let pv = req.query.pv ? req.query.pv : req.user.pv.sigla
         let group = req.query.group
-        //    console.log("variazioni " + pv)
         let variazioni = await getVariazioni(pv)
 
         if (variazioni) {
@@ -303,7 +296,7 @@ router.get('/autovariazione', async (req, res, next) => {
     try {
         let pv = req.query.pv
         let variazioni = await variazioniAutomatiche(pv)
-        // console.log(variazioni)
+        console.log(variazioni)
         if (variazioni.inviati) {
             res.status(200).send(variazioni)
         }
@@ -321,7 +314,6 @@ router.get('/labellist', async (req, res, next) => {
     try {
         let pv = req.query.pv
         let list = await getLabelsList(pv)
-        // console.log(variazioni)
         if (list) {
             res.status(200).send(list)
         }
@@ -336,77 +328,5 @@ router.get('/labellist', async (req, res, next) => {
 })
 
 
-
-
-
-
-/*
-router.post('/vcloud', async function (req, res, next) {
-    try {
-
-        let codici = req.body.codici
-        let pv = req.body.pv
-        let now = new Date()
-        let timestamp = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}_T${now.getHours()}:${now.getMinutes()}`
-        //let nomeFile = `./csv/test_${timestamp}.csv`
-
-        let jsonToSes = {}
-
-        for (let i = 0; i < codici.length; i++) {
-            let articolo = await getDatiArticolo(codici[i], pv)
-
-
-
-            // let riga = `${articolo.CODICE};${articolo.CODICE};;${articolo.PREZZO.toFixed(2)};${articolo.PREZZOCONSIGLIATO.toFixed(2)};${articolo.PREZZOPRECEDENTE.toFixed(2)};${articolo.MARCA};${articolo.MARCA};${articolo.DESCRIZIONE};${articolo.BARCODE};;;;;;;;;${articolo.ECATLINK};"01";"01";;;;;;;;;;;;;;${mergeCARFields(articolo)}`
-
-
-        }
-        //console.log(result)
-        // if (body.CODICE) {
-        res.download(nomeFile)
-        //}
-        //else {
-        //   res.status(404).send(result.errore);
-        // }
-
-
-    } catch (err) {
-        console.log(err)
-        logger.error(err)
-    }
-
-});
-
-
-router.get('/csv', async function (req, res, next) {
-    try {
-
-        let codici = req.body.codici
-        let pv = req.body.pv
-        let now = new Date()
-        let timestamp = `${now.getFullYear()}-${now.getMonth()}-${now.getDate()}_T${now.getHours()}:${now.getMinutes()}`
-        let nomeFile = `./csv/test_${timestamp}.csv`
-
-        for (let i = 0; i < codici.length; i++) {
-            let articolo = await getDatiArticolo(codici[i], pv)
-
-            let riga = `${articolo.CODICE};${articolo.CODICE};;${articolo.PREZZO.toFixed(2)};${articolo.PREZZOCONSIGLIATO.toFixed(2)};${articolo.PREZZOPRECEDENTE.toFixed(2)};${articolo.MARCA};${articolo.MARCA};${articolo.DESCRIZIONE};${articolo.BARCODE};;;;;;;;;${articolo.ECATLINK};"01";"01";;;;;;;;;;;;;;${mergeCARFields(articolo)}`
-            await fs.writeFile(nomeFile, riga, { flag: 'a' });
-        }
-        //console.log(result)
-        // if (body.CODICE) {
-        res.download(nomeFile)
-        //}
-        //else {
-        //   res.status(404).send(result.errore);
-        // }
-
-
-    } catch (err) {
-        console.log(err)
-        logger.error(err)
-    }
-
-});*/
 
 module.exports = router;

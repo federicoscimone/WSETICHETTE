@@ -19,10 +19,10 @@ async function addEvent(client, dati) {
 
 
 // recupera ultimi X eventi
-async function getEvent(client, user) {
+async function getEvent(client, user, pv) {
     try {
         const event = client.db(dbUtenti).collection("eventi");
-        const result = await event.find({ utente: { $in: [user, "system"] } }).sort({ data: -1 }).limit(10).toArray()
+        const result = await event.find({ utente: { $in: [user, "system"] }, pv: pv }).sort({ data: -1 }).limit(10).toArray()
         return result
     } catch (err) {
         return err;
@@ -56,8 +56,6 @@ async function updateLastLogin(client, utente) {
         let query = { username: utente.username }
         utenti.updateOne(query, { $set: { lastLogin: new Date() } }, (err, res) => {
             if (err) throw err;
-            //   console.log(res)
-
             return res
         })
 

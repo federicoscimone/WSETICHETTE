@@ -15,7 +15,8 @@ const mongoClient = new MongoClient(mongoDbUrl)
 router.get('/getLastEvent', async (req, res, next) => {
     try {
         let user = req.user.username
-        let getResult = await getEvent(mongoClient, user)
+        let pv = req.user.pv.sigla
+        let getResult = await getEvent(mongoClient, user, pv)
         if (getResult[0]) {
             res.status(200).send(getResult)
         } else {
