@@ -17,7 +17,6 @@ const mongoClient = new MongoClient(mongoDbUrl)
 // aggiungere i punti vendita che passano alla nuova app o creare loop che invia lo stesso comando per tutte le sedi
 
 cron.schedule('30 6,7,8 * * *', async () => {
-
     if (MODE === 'PROD') {
         variazioniAutomatiche('MI')
         variazioniAutomatiche('LC')
@@ -29,16 +28,39 @@ cron.schedule('30 6,7,8 * * *', async () => {
 });
 
 cron.schedule('40 6,7,8 * * *', async () => {
-
     if (MODE === 'PROD') {
         variazioniAutomatiche('MN')
         variazioniAutomatiche('VA')
         variazioniAutomatiche('MM')
+        variazioniAutomatiche('GR')
         logger.info("INVIO VARIAZIONI AUTOMATICHE 2")
     }
 
 });
 
+cron.schedule('50 6,7,8 * * *', async () => {
+    if (MODE === 'PROD') {
+        variazioniAutomatiche('CP')
+        variazioniAutomatiche('PD')
+        variazioniAutomatiche('U2')
+        variazioniAutomatiche('VR')
+        logger.info("INVIO VARIAZIONI AUTOMATICHE 3")
+    }
+
+});
+
+cron.schedule('59 6,7,8 * * *', async () => {
+    if (MODE === 'PROD') {
+        variazioniAutomatiche('PA')
+        variazioniAutomatiche('UD')
+        variazioniAutomatiche('ZA')
+        //variazioniAutomatiche('LO')
+        logger.info("INVIO VARIAZIONI AUTOMATICHE 4")
+    }
+
+});
+
+// FINE SCHEDULING
 
 const variazioniAutomatiche = async (pv) => {
     try {
@@ -47,9 +69,6 @@ const variazioniAutomatiche = async (pv) => {
         //let codici = []
         let currentLabels = await getLabelsList(pv)
         let isNewFinDay = await isNewFinancialDay(mongoClient, pv)
-
-        console.log(currentLabels)
-        console.log(isNewFinDay)
 
         if (isNewFinDay) {
             let labelConFin = currentLabels.filter(l => l.prezzo > 200 && l.type !== '2.6 BWR').map(e => e.codice)
