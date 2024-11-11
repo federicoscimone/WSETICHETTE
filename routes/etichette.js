@@ -54,7 +54,8 @@ cron.schedule('59 6,7,8 * * *', async () => {
         variazioniAutomatiche('PA')
         variazioniAutomatiche('UD')
         variazioniAutomatiche('ZA')
-        //variazioniAutomatiche('LO')
+        variazioniAutomatiche('LO')
+        variazioniAutomatiche('VI')
         logger.info("INVIO VARIAZIONI AUTOMATICHE 4")
     }
 
@@ -71,7 +72,7 @@ const variazioniAutomatiche = async (pv) => {
         let isNewFinDay = await isNewFinancialDay(mongoClient, pv)
 
         if (isNewFinDay) {
-            let labelConFin = currentLabels.filter(l => l.prezzo > 200 && l.type !== '2.6 BWR').map(e => e.codice)
+            let labelConFin = currentLabels.filter(l => l.prezzo > 200 && l.type !== '2.6 BWR' && l.type !== '2.7 BWR').map(e => e.codice)
             codici = codici.concat(labelConFin)
         }
 
