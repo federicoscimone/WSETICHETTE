@@ -197,19 +197,22 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
         let arrayErrors = []
         let arrayToSes = []
         if (scenario === "dataOnly") scenario = null
-
-        //recupero dati finanziari per ogni codice
+        const tag = await getTagFromScenarioId(mongoClient, scenario)
+        // Recupero dati finanziari per ogni codice
         for (let i = 0; i < datiEtichette.length; i++) {
-            if (!datiEtichette[i].error) {
-
-                if (finanziaria.includes("STAR DAYS")) {
-                    datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i].PREZZOVANTAGE, pv, finanziaria);
-                } else {
-                    datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i].PREZZO, pv, finanziaria);
+            if (datiEtichette[i] && !datiEtichette[i].error) {
+                try {
+                    if (finanziaria && tag.includes('starclub')) {
+                        datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i]?.PREZZOVANTAGE || 0, pv, finanziaria) || {};
+                    } else {
+                        datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i]?.PREZZO || 0, pv, finanziaria) || {};
+                    }
+                } catch (error) {
+                    console.error(`Errore nel recupero dati finanziari per indice ${i}:`, error);
+                    datiEtichette[i].datiFin = {};
                 }
             }
         }
-
 
         console.log(datiEtichette)
         for (let y = 0; y < datiEtichette.length; y++) {
@@ -219,13 +222,14 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                 }
                 else {
                     //composizione json per vcloud secondo la semantica stabilita su studio
+
                     let CODICE = datiEtichette[y].CODICE
                     let toSES = {
                         id: CODICE,
                         price: datiEtichette[y].PREZZO,
                         description: datiEtichette[y].DESCRIZIONE,
                         references: [datiEtichette[y].BARCODE],
-                        brand: datiEtichette[y].MARCA,
+                        brand: datiEtichette[y].MARCA === "SAMSUNG" ? "Samsung" : datiEtichette[y].MARCA,
                         name: datiEtichette[y].CODICEEURONICS,
                         custom: {
                             utente: user,
@@ -235,7 +239,9 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                             prezzoVantage: datiEtichette[y].PREZZOVANTAGE ? datiEtichette[y].PREZZOVANTAGE.toString() : "",
                             prezzoMinimo: datiEtichette[y].PREZZOMINIMO ? datiEtichette[y].PREZZOMINIMO.toString() : "",
                             caratteristiche: datiEtichette[y].CARATTERISTICHE ? datiEtichette[y].CARATTERISTICHE.toString() : "",
-                            stelle: Math.floor(datiEtichette[y].PREZZO).toString(),
+                            stelle: tag.includes("starclub")
+                                ? Math.floor(datiEtichette[y]?.PREZZOVANTAGE).toString()
+                                : Math.floor(datiEtichette[y]?.PREZZO).toString(),
                         },
                         multimedia: {
                             url: datiEtichette[y].ECATLINK,
