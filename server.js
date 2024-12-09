@@ -202,8 +202,7 @@ function onListening() {
 if (process.env.MODE === 'DEV') server.listen(PORT);
 
 else {
-    // server.listen(PORT, "etichette.brunoapps.com");
-    server.listen(PORT, "10.1.108.231");
+    server.listen(PORT, "etichette.brunoapps.com");
     server.addContext('etichette.bruno.it', options)
 }
 
