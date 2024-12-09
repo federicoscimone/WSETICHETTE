@@ -197,14 +197,24 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
         let arrayErrors = []
         let arrayToSes = []
         if (scenario === "dataOnly") scenario = null
-
-        //recupero dati finanziari per ogni codice
+        const tag = await getTagFromScenarioId(mongoClient, scenario)
+        // Recupero dati finanziari per ogni codice
         for (let i = 0; i < datiEtichette.length; i++) {
-            if (!datiEtichette[i].error) {
-                datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i].PREZZO, pv, finanziaria)
+            if (datiEtichette[i] && !datiEtichette[i].error) {
+                try {
+                    if (finanziaria && tag.includes('starclub')) {
+                        datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i]?.PREZZOVANTAGE || 0, pv, finanziaria) || {};
+                    } else {
+                        datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i]?.PREZZO || 0, pv, finanziaria) || {};
+                    }
+                } catch (error) {
+                    console.error(`Errore nel recupero dati finanziari per indice ${i}:`, error);
+                    datiEtichette[i].datiFin = {};
+                }
             }
         }
 
+        console.log(datiEtichette)
         for (let y = 0; y < datiEtichette.length; y++) {
             if (datiEtichette[y]) {
                 if (datiEtichette[y].error) {
@@ -212,13 +222,14 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                 }
                 else {
                     //composizione json per vcloud secondo la semantica stabilita su studio
+
                     let CODICE = datiEtichette[y].CODICE
                     let toSES = {
                         id: CODICE,
                         price: datiEtichette[y].PREZZO,
                         description: datiEtichette[y].DESCRIZIONE,
                         references: [datiEtichette[y].BARCODE],
-                        brand: datiEtichette[y].MARCA,
+                        brand: datiEtichette[y].MARCA === "SAMSUNG" ? "Samsung" : datiEtichette[y].MARCA,
                         name: datiEtichette[y].CODICEEURONICS,
                         custom: {
                             utente: user,
@@ -228,7 +239,9 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                             prezzoVantage: datiEtichette[y].PREZZOVANTAGE ? datiEtichette[y].PREZZOVANTAGE.toString() : "",
                             prezzoMinimo: datiEtichette[y].PREZZOMINIMO ? datiEtichette[y].PREZZOMINIMO.toString() : "",
                             caratteristiche: datiEtichette[y].CARATTERISTICHE ? datiEtichette[y].CARATTERISTICHE.toString() : "",
-                            stelle: Math.floor(datiEtichette[y].PREZZO).toString(),
+                            stelle: tag.includes("starclub")
+                                ? Math.floor(datiEtichette[y]?.PREZZOVANTAGE).toString()
+                                : Math.floor(datiEtichette[y]?.PREZZO).toString(),
                         },
                         multimedia: {
                             url: datiEtichette[y].ECATLINK,
@@ -272,6 +285,12 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                         if (scenario === 'NOPROMO' && toSES.custom.prezzoMinimo <= toSES.price) {
                             scenarioToses = 'default'
                             arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo mimino < prezzo, applicato scenario default` })
+                        }
+
+                        //se lo scenario è Prezzo Tagliato Starclub ma il prezzo minimo non è valido
+                        if (scenario === 'StarCutH' && toSES.custom.prezzoConsigliato <= toSES.price) {
+                            scenarioToses = 'default'
+                            arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo consigliato < prezzo, applicato scenario default` })
                         }
 
                         //se lo scenario è Prezzo Consigliato ma il prezzo consigliato non è valido
@@ -372,6 +391,33 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
 
                         }
 
+
+                        // se lo scenario è Finanziaria Prezzo minimo tagliato StarClub
+                        if (scenario === 'StarCutFinH') {
+
+                            // se l'importo NON è finanziabile e il prezzo Minimo non è valido
+                            if (datiEtichette[y].datiFin.error && toSES.custom.prezzoConsigliato <= toSES.price) {
+                                // allora applico lo scenario default
+                                scenarioToses = 'default'
+                                arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo  > prezzo Consigliato e importo non finanziabile, applicato scenario default` })
+                            }
+
+                            // se l'importo NON è finanziabile ma il prezzo minimo  è valido
+                            if (datiEtichette[y].datiFin.error && toSES.custom.prezzoConsigliato > toSES.price) {
+                                // allora applico lo scenario Prezzo Minimo
+                                scenarioToses = 'StartCutH'
+                                arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Importo non finanziabile, applicato scenario Prezzo Consigliato tagliato` })
+                            }
+
+                            // se l'importo è finanziabile e il prezzo consigliato non è valido
+                            if (!datiEtichette[y].datiFin.error && toSES.custom.prezzoConsigliato <= toSES.price) {
+                                // allora applico lo scenario Finanziaria
+                                scenarioToses = 'TASSO0'
+                                arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo  > prezzo Consigliato, applicato scenario Finanziaria` })
+                            }
+
+                        }
+
                         //SCENARI VERTICALI   
                         //se lo scenario è Prezzo Tagliato ma il prezzo minimo non è valido
                         if (scenario === 'CUTVERT_1' && toSES.custom.prezzoMinimo <= toSES.price) {
@@ -379,6 +425,11 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                             arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo mimino < prezzo, applicato scenario default` })
                         }
 
+                        //se lo scenario è Prezzo StarClub ma il prezzo minimo non è valido
+                        if (scenario === 'StarCutV' && toSES.custom.prezzoConsigliato <= toSES.price) {
+                            scenarioToses = 'CUTVERT'
+                            arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo consigliato < prezzo, applicato scenario default` })
+                        }
                         //se lo scenario è Prezzo Consigliato ma il prezzo consigliato non è valido
                         if (scenario === 'prezzoConsVert' && toSES.custom.prezzoConsigliato <= toSES.price) {
                             scenarioToses = 'CUTVERT'
@@ -448,7 +499,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                         //se lo scenario è Prezzo Consigliato tagliato ma il prezzo consigliato non è valido
                         if (scenario === 'prezzoConsCutV' && toSES.custom.prezzoConsigliato <= toSES.price) {
                             scenarioToses = 'CUTVERT'
-                            arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `rezzo consigliato < prezzo, applicato scenario default` })
+                            arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo consigliato < prezzo, applicato scenario default` })
                         }
 
                         // se lo scenario è Finanziaria Prezzo Consigliato
@@ -478,6 +529,39 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
 
                         }
 
+
+
+                        // se lo scenario è Finanziaria Prezzo StarClub
+                        if (scenario === 'StarCutFinV') {
+
+                            // se l'importo NON è finanziabile e il prezzo Minimo non è valido
+                            if (datiEtichette[y].datiFin.error && toSES.custom.prezzoConsigliato <= toSES.price) {
+                                // allora applico lo scenario default
+                                scenarioToses = 'CUTVERT'
+                                arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo  > prezzo Consigliato e importo non finanziabile, applicato scenario default` })
+                            }
+
+                            // se l'importo NON è finanziabile ma il prezzo minimo  è valido
+                            if (datiEtichette[y].datiFin.error && toSES.custom.prezzoConsigliato > toSES.price) {
+                                // allora applico lo scenario Prezzo Minimo
+                                scenarioToses = 'StarCutV'
+                                arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Importo non finanziabile, applicato scenario Prezzo Consigliato tagliato` })
+                            }
+
+
+                            // se l'importo è finanziabile e il prezzo minimo non è valido
+                            if (!datiEtichette[y].datiFin.error && toSES.custom.prezzoConsigliato <= toSES.price) {
+                                // allora applico lo scenario Finanziaria
+                                scenarioToses = 'T0VERT'
+                                arrayErrors.push({ codice: datiEtichette[y].CODICE, error: `Prezzo  > prezzo Consigliato, applicato scenario Finanziaria` })
+                            }
+
+
+                        }
+
+
+
+
                         toSES.custom.scenario = scenarioToses
                     } else {
 
@@ -495,6 +579,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                         if (datiEtichette[y].icon.VALUE5) toSES.custom.icovalue5 = datiEtichette[y].icon.VALUE5 === '0' ? "" : datiEtichette[y].icon.VALUE5.toString()
                         if (datiEtichette[y].icon.IDICO6) toSES.custom.ico6 = datiEtichette[y].icon.IDICO6.toString()
                         if (datiEtichette[y].icon.VALUE6) toSES.custom.icovalue6 = datiEtichette[y].icon.VALUE6 === '0' ? "" : datiEtichette[y].icon.VALUE6.toString()
+
                     }
                     arrayToSes.push(toSES)
                 }

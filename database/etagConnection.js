@@ -56,6 +56,7 @@ async function getScenariosName(client) {
     }
 }
 
+
 module.exports = {
     getIdScenarioFromName: getIdScenarioFromName,
     getScenariosName: getScenariosName,

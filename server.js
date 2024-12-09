@@ -42,7 +42,7 @@ const morganMiddleware = morgan(
 const etichette = require('./routes/etichette')
 const utenti = require('./routes/utenti')
 const finanziarie = require('./routes/finanziarie')
-const bandierineRouter = require('./routes/bandierine')
+//const bandierineRouter = require('./routes/bandierine')
 app.use(morgan('dev'));
 app.use(morganMiddleware);
 
@@ -54,6 +54,7 @@ server.on('listening', onListening);
 
 app.use(requestIp.mw())
 app.use(cors());
+
 
 app.use(bodyParser.urlencoded({
     extended: false,
@@ -149,7 +150,7 @@ app.get('/checkUser', authenticateJWT, function (req, res, next) {
 app.use('/etichette', authenticateJWT, etichette)
 app.use('/utenti', authenticateJWT, utenti)
 app.use('/finanziarie', authenticateJWT, finanziarie)
-app.use('/bandierine', authenticateJWT, bandierineRouter)
+//app.use('/bandierine', authenticateJWT, bandierineRouter)
 
 app.use((req, res, next) => {
     res.status(404).json({ "error": '404 percorso non trovato' });
@@ -188,6 +189,7 @@ function onError(error) {
  * Event listener for HTTP server "listening" event.
  */
 
+
 function onListening() {
     let addr = server.address();
     let bind = typeof addr === 'string'
@@ -200,6 +202,10 @@ function onListening() {
 if (process.env.MODE === 'DEV') server.listen(PORT);
 
 else {
-    server.listen(PORT, "etichette.brunoapps.com");
+    // server.listen(PORT, "etichette.brunoapps.com");
+    server.listen(PORT, "10.1.108.231");
     server.addContext('etichette.bruno.it', options)
 }
+
+
+
