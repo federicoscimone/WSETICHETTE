@@ -196,13 +196,18 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
     try {
         let arrayErrors = []
         let arrayToSes = []
-        if (scenario === "dataOnly") scenario = null
-        const tag = await getTagFromScenarioId(mongoClient, scenario)
+        let tag = []
+        if (scenario === "dataOnly") { scenario = null }
+        else {
+            tag = await getTagFromScenarioId(mongoClient, scenario)
+
+        }
+
         // Recupero dati finanziari per ogni codice
         for (let i = 0; i < datiEtichette.length; i++) {
             if (datiEtichette[i] && !datiEtichette[i].error) {
                 try {
-                    if (finanziaria && tag.includes('starclub')) {
+                    if (finanziaria && tag?.includes('starclub')) {
                         datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i]?.PREZZOVANTAGE || 0, pv, finanziaria) || {};
                     } else {
                         datiEtichette[i].datiFin = await getDatiFinanziariaDinamic(datiEtichette[i]?.PREZZO || 0, pv, finanziaria) || {};
@@ -239,7 +244,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
                             prezzoVantage: datiEtichette[y].PREZZOVANTAGE ? datiEtichette[y].PREZZOVANTAGE.toString() : "",
                             prezzoMinimo: datiEtichette[y].PREZZOMINIMO ? datiEtichette[y].PREZZOMINIMO.toString() : "",
                             caratteristiche: datiEtichette[y].CARATTERISTICHE ? datiEtichette[y].CARATTERISTICHE.toString() : "",
-                            stelle: tag.includes("starclub")
+                            stelle: tag?.includes("starclub")
                                 ? Math.floor(datiEtichette[y]?.PREZZOVANTAGE).toString()
                                 : Math.floor(datiEtichette[y]?.PREZZO).toString(),
                         },
