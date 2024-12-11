@@ -198,10 +198,7 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
         let arrayToSes = []
         let tag = []
         if (scenario === "dataOnly") { scenario = null }
-        else {
-            tag = await getTagFromScenarioId(mongoClient, scenario)
-
-        }
+        if (scenario) tag = await getTagFromScenarioId(mongoClient, scenario)
 
         // Recupero dati finanziari per ogni codice
         for (let i = 0; i < datiEtichette.length; i++) {
