@@ -316,7 +316,6 @@ router.get('/autovariazione', async (req, res, next) => {
     try {
         let pv = req.query.pv
         let variazioni = await variazioniAutomatiche(pv)
-        console.log(variazioni)
         if (variazioni.inviati) {
             res.status(200).send(variazioni)
         }

@@ -54,7 +54,9 @@ const getLabelsListVusion = async (siglapv, page) => {
 const getOrientFromName = (scenarios, scenario) => {
     if (scenario) {
         let find = scenarios.find(e => e.scenarioId === scenario)
-        return find.orientation
+        if (find)
+            return find.orientation
+        else return 'orizzontale'
     } else {
         return 'orizzontale'
     }
@@ -64,7 +66,7 @@ const getOrientFromName = (scenarios, scenario) => {
 const getScenarioTags = (scenarios, scenario) => {
     if (scenario) {
         let find = scenarios.find(e => e.scenarioId === scenario)
-        if (find.tag)
+        if (find && find.tag)
             return find.tag
         else return []
     } else {
@@ -216,7 +218,6 @@ const generateSesJson = async (pv, datiEtichette, finanziaria, scenario, user, c
             }
         }
 
-        console.log(datiEtichette)
         for (let y = 0; y < datiEtichette.length; y++) {
             if (datiEtichette[y]) {
                 if (datiEtichette[y].error) {
